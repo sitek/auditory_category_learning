@@ -5,11 +5,19 @@ import os
 import json
 import argparse
 import numpy as np
+import matplotlib.pyplot as plt
+import nibabel as nib
 
-import bids
 from bids import BIDSLayout
 
 from glob import glob
+
+from nilearn.glm.first_level import first_level_from_bids
+from nilearn.glm.first_level import make_first_level_design_matrix
+from nilearn.reporting import make_glm_report
+
+from nilearn import plotting
+from scipy.stats import norm
 
 parser = argparse.ArgumentParser(
                 description='Generate bids-compatible event file from psychopy log',
@@ -59,16 +67,6 @@ bold_files = layout.get(return_type='filename', subject=subject_id,
 # ## nilearn modeling: first level
 # based on: https://nilearn.github.io/auto_examples/04_glm_first_level/plot_bids_features.html#sphx-glr-auto-examples-04-glm-first-level-plot-bids-features-py
 def prep_models_and_args(subject_id, task_id, fwhm, bidsroot, deriv_dir, space_label='T1w', event_type):
-    from nilearn.glm.first_level import first_level_from_bids
-    from nilearn.glm.first_level import make_first_level_design_matrix
-    from nilearn.reporting import make_glm_report
-
-    import nibabel as nib
-
-    from nilearn import plotting
-    import matplotlib.pyplot as plt
-    from scipy.stats import norm
-
     data_dir = bidsroot
     derivatives_folder = os.path.join(deriv_dir, 'fmriprep')
 
@@ -384,7 +382,7 @@ def create_cortical_masks():
     return aud_mask_fpath
 
 # #### mask auditory regions
-def mask_z_map_imgs():
+def mask_z_map_imgs(subject_id, task_label, fwhm, space_label, p_val=0.005):
     from nilearn.masking import apply_mask
     from nilearn.masking import unmask
 
@@ -411,12 +409,24 @@ def mask_z_map_imgs():
 
     # save plot
     plot_fpath = os.path.join(nilearn_dir, 
-                            'sub-%s_task-%s_fwhm-%.02f_pval-%.03f_space-%s_mask-aud.png'%(model.subject_label,
-                                                                        task_label,fwhm_sub, p_val,
+                            'sub-%s_task-%s_fwhm-%.02f_pval-%.03f_space-%s_mask-aud.png'%(subject_id,
+                                                                        task_label, fwhm, p_val,
                                                                         space_label))
     fig.savefig(plot_fpath)
     return plot_fpath
 
+# transform MNI-space atlas into subject's T1w space
+def transform_atlas_mni_to_t1w(t1w_fpath, atlas_fpath, transform_fpath):
+    from ants import apply_transforms
+    
+    t1w_fpath = '/bgfs/bchandrasekaran/krs228/data/FLT/derivatives/fmriprep/' + \
+                      'sub-FLT01/anat/sub-FLT01_desc-preproc_T1w.nii.gz'
+    transform_fpath = '/bgfs/bchandrasekaran/krs228/data/FLT/derivatives/fmriprep/' + \
+                      'sub-FLT01/anat/sub-FLT01_from-MNI152NLin2009cAsym_to-T1w_mode-image_xfm.h5'
+
+    atlas_spacet1w_fpath = apply_transforms(t1w_fpath, atlas_fpath, [transform_fpath], interpolator='multiLabel')
+
+    return atlas_spacet1w_fpath
 
 # #### Load subcortical (MNI space) regions
 def load_IC_MNI():

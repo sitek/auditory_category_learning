@@ -42,14 +42,12 @@ if not os.path.exists(nilearn_dir):
 
 
 # #### define T1w-space aparc+aseg file (from fmriprep)
-
 aparc_fpath = os.path.join(deriv_dir, 'fmriprep/',
                            'sub-%s/anat'%subject_id,
                            'sub-%s_desc-aparcaseg_dseg.nii.gz'%subject_id)
 
-# ### import data with `pybids` and test out capabilities
+# ### import data with `pybids` 
 # based on: https://github.com/bids-standard/pybids/blob/master/examples/pybids_tutorial.ipynb
-
 layout = BIDSLayout(bidsroot)
 
 all_files = layout.get()
@@ -154,7 +152,7 @@ def prep_models_and_args(subject_id, task_id, fwhm, bidsroot, deriv_dir, space_l
         
     model_and_args = zip(models, models_run_imgs, models_events, models_confounds)
 
-    return models_and_args, stim_list
+    return model_and_args, stim_list
 
 # ### Across-runs GLM
 def nilearn_glm_across_runs(model_and_args, stim_list):
@@ -542,7 +540,8 @@ def region_decoding(z_maps, conditions, mask_descrip, n_runs):
     decoding_dir = os.path.join(masked_data_dir, 'decoding')
     os.makedirs(decoding_dir, exist_ok=True)
     print('saving files to ', decoding_dir)
-
+    
+    decoder_img_fpath_list = []
     for ix, decoder_cond in enumerate(decoder.coef_img_):
         decoder_img = decoder.coef_img_[decoder_cond]
         decoder_img_fpath = os.path.join(decoding_dir,
@@ -551,6 +550,7 @@ def region_decoding(z_maps, conditions, mask_descrip, n_runs):
                                                                                 mask_descrip,
                                                                                 decoder_cond))
         nib.save(decoder_img, decoder_img_fpath)
+        decoder_img_fpath_list.append(decoder_img_fpath)
 
     return decoder_img_fpath_list
 
@@ -639,3 +639,11 @@ def create_mask_striatum(model, aparc_fpath, t1w_fpath):
 
     nib.save(striatum_mask_anat_img,)
     return striatum_mask_fpath
+
+# run pipeline
+model_and_args, stim_list = prep_models_and_args(subject_id, task_id, fwhm, bidsroot, 
+                                                 deriv_dir, space_label='T1w', event_type)
+zmap_fpath, contrast_label = nilearn_glm_per_run(model_and_args, stim_list)
+z_maps, conditions = generate_conditions(subject_id, fwhm, space_label='T1w', deriv_dir)
+decoder_img_fpath_list = region_decoding(z_maps, conditions, mask_descrip, n_runs)
+masked_data_fpath, conditions_fpath = save_masked_conditions_timeseries(mask, z_maps, out_dir)

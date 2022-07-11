@@ -4,28 +4,22 @@
 import os
 import json
 import argparse
+
 import numpy as np
 import matplotlib.pyplot as plt
 import nibabel as nib
 
-from bids import BIDSLayout
-
 from glob import glob
-
-from nilearn.glm.first_level import first_level_from_bids
-from nilearn.glm.first_level import make_first_level_design_matrix
-from nilearn.reporting import make_glm_report
-
 from nilearn import plotting
-from scipy.stats import norm
 
 parser = argparse.ArgumentParser(
-                description='Generate bids-compatible event file from psychopy log',
-                epilog='Example: python bids_modeling.py --sub=FLT02 --task=tonecat --fwhm=1.5'
+                description='Subject-level modeling of fmriprep-preprocessed data',
+                epilog='Example: python bids_modeling.py --sub=FLT02 --task=tonecat --space=T1w --fwhm=1.5'
         )
 
 parser.add_argument("--sub", help="participant id", type=str)
 parser.add_argument("--task", help="task id", type=str)
+parser.add_argument("--space", help="space label", type=str)
 parser.add_argument("--fwhm", help="spatial smoothing full-width half-max", type=float)
 
 args = parser.parse_args()
@@ -37,8 +31,8 @@ if len(sys.argv) < 2:
 
 subject_id = args.sub
 task_id = args.task
+space_label=args.space
 fwhm = args.fwhm
-#subject_id = 'FLT01'
 
 project_dir = os.path.join('/bgfs/bchandrasekaran/krs228/data/', 'FLT/')
 bidsroot = os.path.join(project_dir,'data_bids')
@@ -48,25 +42,23 @@ nilearn_dir = os.path.join(deriv_dir, 'nilearn')
 if not os.path.exists(nilearn_dir):
         os.makedirs(nilearn_dir)
 
-
-# #### define T1w-space aparc+aseg file (from fmriprep)
-aparc_fpath = os.path.join(deriv_dir, 'fmriprep/',
-                           'sub-%s/anat'%subject_id,
-                           'sub-%s_desc-aparcaseg_dseg.nii.gz'%subject_id)
-
 # ### import data with `pybids` 
 # based on: https://github.com/bids-standard/pybids/blob/master/examples/pybids_tutorial.ipynb
-layout = BIDSLayout(bidsroot)
+def import_bids_data(bidsroot):
+    from bids import BIDSLayout
 
-all_files = layout.get()
-t1w_fpath = layout.get(return_type='filename', suffix='T1w', extension='nii.gz')[0]
-bold_files = layout.get(return_type='filename', subject=subject_id, 
-                        suffix='bold', task=task_id,extension='nii.gz')
+    layout = BIDSLayout(bidsroot)
 
+    all_files = layout.get()
+    t1w_fpath = layout.get(return_type='filename', suffix='T1w', extension='nii.gz')[0]
+    bold_files = layout.get(return_type='filename', subject=subject_id, 
+                            suffix='bold', task=task_id,extension='nii.gz')
+    return all_files, t1w_fpath, bold_files
 
 # ## nilearn modeling: first level
 # based on: https://nilearn.github.io/auto_examples/04_glm_first_level/plot_bids_features.html#sphx-glr-auto-examples-04-glm-first-level-plot-bids-features-py
-def prep_models_and_args(subject_id, task_id, fwhm, bidsroot, deriv_dir, space_label='T1w', event_type):
+def prep_models_and_args(subject_id, task_id, fwhm, bidsroot, deriv_dir, event_type, space_label='T1w'):
+    from nilearn.glm.first_level import first_level_from_bids
     data_dir = bidsroot
     derivatives_folder = os.path.join(deriv_dir, 'fmriprep')
 
@@ -154,6 +146,7 @@ def prep_models_and_args(subject_id, task_id, fwhm, bidsroot, deriv_dir, space_l
 
 # ### Across-runs GLM
 def nilearn_glm_across_runs(model_and_args, stim_list):
+    from nilearn.reporting import make_glm_report
     for midx, (model, imgs, events, confounds) in enumerate(model_and_args):
         for sx, stim in enumerate(stim_list):
             contrast_label = stim
@@ -209,6 +202,7 @@ def nilearn_glm_across_runs(model_and_args, stim_list):
 
 # ### Run-by-run GLM fit
 def nilearn_glm_per_run(model_and_args, stim_list):
+    from nilearn.reporting import make_glm_report
     for midx, (model, imgs, events, confounds) in enumerate(model_and_args):
         stim_contrast_list = []
         for sx, stim in enumerate(stim_list):
@@ -274,7 +268,6 @@ def nilearn_glm_per_run(model_and_args, stim_list):
                     print('saved report to ', report_fpath)
                 except:
                     print('could not run for ', img, ' with ', contrast_label)
-    return zmap_fpath, contrast_label
 
 def plot_stat_maps():
     from scipy.stats import norm
@@ -306,7 +299,7 @@ def plot_stat_maps():
     return plot_fpath
 
 # ## plot tsnr
-def plot_tsnr():
+def plot_tsnr(bold_files):
     from nilearn import image
 
     thresh = 0
@@ -314,7 +307,6 @@ def plot_tsnr():
 
     for fx,filepath in enumerate(bold_files):
         tsnr_func = image.math_img('img.mean(axis=3) / img.std(axis=3)', img=filepath)
-
         tsnr_func_smooth = image.smooth_img(tsnr_func, fwhm=5)
 
         display = plotting.plot_stat_map(tsnr_func_smooth, 
@@ -324,18 +316,24 @@ def plot_tsnr():
                                         #threshold=thresh, 
                                         #cmap='jet'
                                         );
+        display.show()
 
 # #### generate anatomical STG masks
-def create_cortical_masks():
+def create_cortical_masks(subject_id, deriv_dir, zmap):
     from scipy.ndimage import binary_dilation
     from nilearn.image import resample_to_img
+    
+    # define T1w-space aparc+aseg file (from fmriprep)
+    aparc_fpath = os.path.join(deriv_dir, 'fmriprep/',
+                            'sub-%s/anat'%subject_id,
+                            'sub-%s_desc-aparcaseg_dseg.nii.gz'%subject_id)
 
     print(aparc_fpath)
     aparc_img = nib.load(aparc_fpath)
     aparc_data = aparc_img.get_fdata()
     aparc_affine = aparc_img.affine
 
-
+    mask_descrip = 'aud-ctx'
     roi_dict = {'lh_stg': 1030, 'lh_hg': 1034, 'rh_stg': 2030, 'rh_hg': 2034}
     lh_labels = list(roi_dict.values())[:2]
     rh_labels = list(roi_dict.values())[2:]
@@ -359,9 +357,9 @@ def create_cortical_masks():
 
 
     nib.save(lh_mask_func_img, os.path.join(nilearn_dir,
-                                            'sub-%s_mask-L-aud-ctx.nii.gz'%model.subject_label))
+                                            'sub-%s_mask-L-aud-ctx.nii.gz'%subject_id))
     nib.save(rh_mask_func_img, os.path.join(nilearn_dir,
-                                            'sub-%s_mask-R-aud-ctx.nii.gz'%model.subject_label))
+                                            'sub-%s_mask-R-aud-ctx.nii.gz'%subject_id))
 
     aud_mask = np.zeros(aparc_data.shape)
     aud_mask[np.where(lh_mask == 1)] = 1
@@ -376,44 +374,10 @@ def create_cortical_masks():
     plotting.plot_stat_map(aud_mask_func_img, bg_img=t1w_fpath, colorbar=False,
                         display_mode='y', cut_coords=6);
 
-    aud_mask_fpath = os.path.join(nilearn_dir,'sub-%s_mask-aud-ctx.nii.gz'%model.subject_label)
+    aud_mask_fpath = os.path.join(nilearn_dir,'sub-%s_mask-%s.nii.gz'%(subject_id, mask_descrip))
     nib.save(aud_mask_func_img, aud_mask_fpath)
     
-    return aud_mask_fpath
-
-# #### mask auditory regions
-def mask_z_map_imgs(subject_id, task_label, fwhm, space_label, p_val=0.005):
-    from nilearn.masking import apply_mask
-    from nilearn.masking import unmask
-
-    masked_data = apply_mask(zmap, aud_mask_func_img)
-    masked_img = unmask(masked_data, aud_mask_func_img)
-
-    p_val = 0.005
-    thresh_unc = norm.isf(p_val)
-
-    # plot
-    fig, axes = plt.subplots(3, 1, figsize=(20, 15))
-    plotting.plot_stat_map(masked_img, bg_img=t1w_fpath, colorbar=True, threshold=thresh_unc,
-                        title='sub-%s %s (unc p<%.03f; fwhm=%.02f; STG mask)'%(model.subject_label, 
-                                                                    task_label,p_val,fwhm_sub),
-                        axes=axes[0],
-                        display_mode='x', cut_coords=6)
-    plotting.plot_stat_map(masked_img, bg_img=t1w_fpath, colorbar=True, threshold=thresh_unc,
-                        axes=axes[1],
-                        display_mode='y', cut_coords=6)
-    plotting.plot_stat_map(masked_img, bg_img=t1w_fpath, colorbar=True, threshold=thresh_unc,
-                        axes=axes[2],
-                        display_mode='z', cut_coords=6)
-    plotting.show()
-
-    # save plot
-    plot_fpath = os.path.join(nilearn_dir, 
-                            'sub-%s_task-%s_fwhm-%.02f_pval-%.03f_space-%s_mask-aud.png'%(subject_id,
-                                                                        task_label, fwhm, p_val,
-                                                                        space_label))
-    fig.savefig(plot_fpath)
-    return plot_fpath
+    return aud_mask_fpath, mask_descrip
 
 # transform MNI-space atlas into subject's T1w space
 def transform_atlas_mni_to_t1w(t1w_fpath, atlas_fpath, transform_fpath):
@@ -429,12 +393,9 @@ def transform_atlas_mni_to_t1w(t1w_fpath, atlas_fpath, transform_fpath):
     return atlas_spacet1w_fpath
 
 # #### Load subcortical (MNI space) regions
-def load_IC_MNI():
-    subcort_atlas_fpath = os.path.join('/bgfs/bchandrasekaran/krs228/',
-                                    'data/reference/',
-                                    'MNI_space/atlases/',
-                                    'sub-invivo_MNI_rois.nii.gz')
-    subcort_img = nib.load(subcort_atlas_fpath)
+def create_IC_masks(subject_id, atlas_spacet1w_fpath, zmap):
+    mask_descrip = 'IC'
+    subcort_img = nib.load(atlas_spacet1w_fpath)
 
     subcort_func_img = resample_to_img(subcort_img, zmap, interpolation='nearest')
 
@@ -445,22 +406,19 @@ def load_IC_MNI():
     mask_IC_img = nib.Nifti1Image(mask_IC, affine = zmap.affine)
 
     mask_IC_fpath = os.path.join(nilearn_dir,
-                                            'sub-%s_space-%s_mask-IC.nii.gz'%(model.subject_label, 
-                                                                            space_label))
+                                            'sub-%s_space-%s_mask-%s.nii.gz'%(subject_id, 
+                                                                             space_label,
+                                                                             mask_descrip))
     nib.save(mask_IC_img, mask_IC_fpath)
     
-    return mask_IC_fpath
+    return mask_IC_fpath, mask_descrip
 
 
-# ## Decoding
-def generate_conditions(sub_id, fwhm_sub, space_label, derivatives_dir):
-    sub_id = 'FLT01'
-    fwhm_sub = 1.5
-    space_label = 'T1w' #'MNI152NLin2009cAsym' 
-
+# grab z-map image files and create a condition list based on condition of choice
+def generate_conditions(subject_id, fwhm, space_label):
     nilearn_sub_dir = os.path.join(bidsroot, 'derivatives', 'nilearn', 
-                                                'level-1_fwhm-%.02f'%fwhm_sub, 
-                                                'sub-%s_space-%s'%(sub_id, space_label))
+                                                'level-1_fwhm-%.02f'%fwhm, 
+                                                'sub-%s_space-%s'%(subject_id, space_label))
     print(nilearn_sub_dir)
 
     z_maps = sorted(glob(nilearn_sub_dir+'/trial_models'+'/run*/*di*nii.gz'))
@@ -468,14 +426,14 @@ def generate_conditions(sub_id, fwhm_sub, space_label, derivatives_dir):
 
     # 16 stimulus decoding
     conditions_all = [os.path.basename(x)[-31:-18] for x in z_maps] 
-    print(conditions_all[:10])
+    print('first ten conditions: ', conditions_all[:10])
 
     # 4-category decoding
     conditions_tone = [stim[:3] for stim in conditions_all]
-    print(conditions_tone[:10])
+    print('first ten conditions by tone: ', conditions_tone[:10])
 
     conditions_talker = [stim[4:6] for stim in conditions_all]
-    print(conditions_talker[:10])
+    print('first ten conditions by talker: ', conditions_talker[:10])
 
     # pick the labels
     conditions = conditions_tone
@@ -483,20 +441,19 @@ def generate_conditions(sub_id, fwhm_sub, space_label, derivatives_dir):
     print('# of trials: ', len(conditions))
     print(conditions[:10])
     print('unique # of conditions = ', np.unique(conditions).shape)
-    # ### Nilearn `Decoder` accuracies
-    # from https://nilearn.github.io/auto_examples/02_decoding/plot_haxby_glm_decoding.html#build-the-decoding-pipeline
-    # **note: does not generate predictions for each fold, so cannot use for confusion matrix generation**
     
     return z_maps, conditions
 
-def region_decoding(z_maps, conditions, mask_descrip, n_runs):
+def region_decoding(subject_id, space_label, z_maps, conditions, mask_descrip, n_runs):
     from nilearn.decoding import Decoder
+    
+    # split into training and test sets based on a held-out run
+    # should automate this!
     n_runs = 4
     split_index = round(len(z_maps) * (n_runs-1) / n_runs)
     print('# of training images = ', split_index)
 
-    # available space-T1w masks: aud_mask_func_img, lh_mask_func_img, rh_mask_func_img
-    # available space-MNI masks: mask_IC_img
+    # available space-T1w masks: 
     mask_descrip = 'L-TTG' #'aud-ctx'
     mask_fpath = nib.load(os.path.join(nilearn_dir, 'sub-%s_mask-%s.nii.gz'%(sub_id, mask_descrip)))
     #mask = mask_IC_fpath
@@ -509,9 +466,13 @@ def region_decoding(z_maps, conditions, mask_descrip, n_runs):
                 )
     decoder.fit(z_maps[:split_index], conditions[:split_index])
 
+    # predict on the held-out run
     y_pred = decoder.predict(z_maps[split_index:])
     print(y_pred)
-
+    
+    # ### Nilearn `Decoder` accuracies
+    # from https://nilearn.github.io/auto_examples/02_decoding/plot_haxby_glm_decoding.html#build-the-decoding-pipeline
+    
     classification_accuracy = np.mean(list(decoder.cv_scores_.values()))
     chance_level = 1. / len(np.unique(conditions))
     print('{} classification accuracy: {:4f} / Chance level: {}'.format(
@@ -524,14 +485,14 @@ def region_decoding(z_maps, conditions, mask_descrip, n_runs):
     region_string = mask_descrip
 
     acc_plot_fpath = os.path.join(masked_data_dir,
-                                    '%s_space-%s_roi-%s_trial_decoding_accuracy.png'%(sub_id, 
-                                                                            space_label,
-                                                                            mask_descrip))
+                                    '%s_space-%s_roi-%s_trial_decoding_accuracy.png'%(subject_id, 
+                                                                                      space_label,
+                                                                                      mask_descrip))
 
     from matplotlib import pyplot as plt
     #plt.figure(figsize=(8,3), dpi=150)
     plt.figure(figsize=(5,3), dpi=150)
-    plt.boxplot(list(decoder.cv_scores_.values()));
+    plt.boxplot(list(decoder.cv_scores_.values()))
     plt.axhline(y=chance_level, color='r', linewidth=0.5)
     plt.title('{} {} SVC accuracy: {:.03f} (Chance level: {})'.format(
                 sub_id, region_string, classification_accuracy, chance_level))
@@ -555,22 +516,22 @@ def region_decoding(z_maps, conditions, mask_descrip, n_runs):
     for ix, decoder_cond in enumerate(decoder.coef_img_):
         decoder_img = decoder.coef_img_[decoder_cond]
         decoder_img_fpath = os.path.join(decoding_dir,
-                                        '%s_space-%s_roi-%s_trial_decoding_cond-%s.nii.gz'%(models[sx].subject_label, 
-                                                                                space_label,
-                                                                                mask_descrip,
-                                                                                decoder_cond))
+                                        '%s_space-%s_roi-%s_trial_decoding_cond-%s.nii.gz'%(subject_id, 
+                                                                                            space_label,
+                                                                                            mask_descrip,
+                                                                                            decoder_cond))
         nib.save(decoder_img, decoder_img_fpath)
         decoder_img_fpath_list.append(decoder_img_fpath)
 
     return decoder_img_fpath_list
 
 # #### Extract and save matrix
-def save_masked_conditions_timeseries(mask, z_maps, out_dir):
+def save_masked_conditions_timeseries(subject_id, mask_descrip, z_maps):
     from nilearn.input_data import NiftiMasker
 
-    mask_descrip = 'L-TTG'
+    #mask_descrip = 'L-TTG'
     mask_fpath = os.path.join('/bgfs/bchandrasekaran/krs228/data/FLT/derivatives/nilearn/',
-                            'sub-%s_mask-%s.nii.gz'%(model.subject_label, mask_descrip))
+                            'sub-%s_mask-%s.nii.gz'%(subject_id, mask_descrip))
 
     masker = NiftiMasker(mask_img=mask_fpath, smoothing_fwhm=None, standardize=False)
     masked_data = masker.fit_transform(z_maps)
@@ -578,13 +539,13 @@ def save_masked_conditions_timeseries(mask, z_maps, out_dir):
     print(masked_data.shape)
 
     masked_data_fpath = os.path.join(nilearn_sub_dir, 'trial_models', 'masked_data',
-                                    'sub-%s_space-%s_roi-%s_trial_zmaps.csv'%(model.subject_label, 
+                                    'sub-%s_space-%s_roi-%s_trial_zmaps.csv'%(subject_id, 
                                                                         space_label,
                                                                         mask_descrip))
     np.savetxt(masked_data_fpath, masked_data)
 
     conditions_fpath = os.path.join(nilearn_sub_dir, 'trial_models', 'masked_data',
-                                    'sub-%s_space-%s_roi-%s_trial_conditions.csv'%(model.subject_label, 
+                                    'sub-%s_space-%s_roi-%s_trial_conditions.csv'%(subject_id, 
                                                                             space_label,
                                                                             mask_descrip))
     np.savetxt(conditions_fpath, conditions, fmt='%s')
@@ -592,10 +553,15 @@ def save_masked_conditions_timeseries(mask, z_maps, out_dir):
     return masked_data_fpath, conditions_fpath
 
 # ### striatum
-def create_mask_striatum(model, aparc_fpath, t1w_fpath):
+def create_mask_striatum(model, deriv_dir, t1w_fpath):
     import nilearn.decoding
     from scipy.ndimage import binary_dilation, binary_erosion
     from nilearn.image import resample_to_img
+
+    # define T1w-space aparc+aseg file (from fmriprep)
+    aparc_fpath = os.path.join(deriv_dir, 'fmriprep/',
+                            'sub-%s/anat'%subject_id,
+                            'sub-%s_desc-aparcaseg_dseg.nii.gz'%subject_id)
 
     print(aparc_fpath)
     aparc_img = nib.load(aparc_fpath)
@@ -646,14 +612,19 @@ def create_mask_striatum(model, aparc_fpath, t1w_fpath):
     striatum_mask_func_img = resample_to_img(striatum_mask_anat_img, zmap, 
                                             interpolation='nearest')
     striatum_mask_fpath = os.path.abspath('sub-%s_mask-striatum.nii.gz'%model.subject_label)
-
+    print('writing mask to ', striatum_mask_fpath)
     nib.save(striatum_mask_anat_img,)
     return striatum_mask_fpath
 
 # run pipeline
+space_label = 'T1w'
+event_type = 'stimulus'
+
+all_files, t1w_fpath, bold_files = import_bids_data(bidsroot)
+
 model_and_args, stim_list = prep_models_and_args(subject_id, task_id, fwhm, bidsroot, 
-                                                 deriv_dir, space_label='T1w', event_type)
+                                                 deriv_dir, event_type, space_label)
 zmap_fpath, contrast_label = nilearn_glm_per_run(model_and_args, stim_list)
-z_maps, conditions = generate_conditions(subject_id, fwhm, space_label='T1w', deriv_dir)
-decoder_img_fpath_list = region_decoding(z_maps, conditions, mask_descrip, n_runs)
+z_maps, conditions = generate_conditions(subject_id, fwhm, space_label, deriv_dir)
+decoder_img_fpath_list = region_decoding(subject_id, space_label, z_maps, conditions, mask_descrip, n_runs)
 masked_data_fpath, conditions_fpath = save_masked_conditions_timeseries(mask, z_maps, out_dir)

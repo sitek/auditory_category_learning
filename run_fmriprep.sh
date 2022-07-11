@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --time=3-00
+#SBATCH --time=2-00
 #SBATCH --mem=100G
 #SBATCH -c 8
 
@@ -39,7 +39,8 @@ sub=$1
 mem=100000
 nprocs=8
 
-# BEFORE RUNNING: build the fmriprep container to a singularity image
+# BEFORE RUNNING FOR THE FIRST TIME: 
+# build the fmriprep container to a singularity image
 # (will only build from head node; no unsquashfs when running from nodes)
 #singularity build $sing_img docker://nipreps/fmriprep:21.0.1
 

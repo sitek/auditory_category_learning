@@ -21,6 +21,7 @@ parser.add_argument("--sub", help="participant id", type=str)
 parser.add_argument("--task", help="task id", type=str)
 parser.add_argument("--space", help="space label", type=str)
 parser.add_argument("--fwhm", help="spatial smoothing full-width half-max", type=float)
+parser.add_argument("--t_acq", help="BOLD acquisition time (if different from repetition time [TR], as in sparse designs", type=float)
 
 args = parser.parse_args()
 
@@ -33,6 +34,7 @@ subject_id = args.sub
 task_id = args.task
 space_label=args.space
 fwhm = args.fwhm
+t_acq = args.t_acq
 
 project_dir = os.path.join('/bgfs/bchandrasekaran/krs228/data/', 'FLT/')
 bidsroot = os.path.join(project_dir,'data_bids')
@@ -57,20 +59,26 @@ def import_bids_data(bidsroot):
 
 # ## nilearn modeling: first level
 # based on: https://nilearn.github.io/auto_examples/04_glm_first_level/plot_bids_features.html#sphx-glr-auto-examples-04-glm-first-level-plot-bids-features-py
-def prep_models_and_args(subject_id, task_id, fwhm, bidsroot, deriv_dir, event_type, space_label='T1w'):
+def prep_models_and_args(subject_id, task_id, fwhm, bidsroot, deriv_dir, event_type, t_r, t_acq, space_label='T1w'):
     from nilearn.glm.first_level import first_level_from_bids
     data_dir = bidsroot
     derivatives_folder = os.path.join(deriv_dir, 'fmriprep')
 
-
     task_label = task_id
     fwhm_sub = fwhm # 1.5
+    
+    # correct the fmriprep-given slice reference (middle slice, or 0.5)
+    # to account for sparse acquisition (silent gap during auditory presentation paradigm)
+    # fmriprep is explicitly based on slice timings, while nilearn is based on t_r
+    # and since images are only collected during a portion of the overall t_r (which includes the silent gap),
+    # we need to account for this
+    slice_time_ref = 0.5 * t_acq / t_r
 
     print(data_dir, task_label, space_label)
     models, models_run_imgs, models_events, models_confounds = first_level_from_bids(data_dir, task_label, space_label,
                                                                                     smoothing_fwhm=fwhm_sub,
                                                                                     derivatives_folder=derivatives_folder,
-                                                                                    slice_time_ref=0.5)
+                                                                                    slice_time_ref=slice_time_ref)
 
     # fill n/a with 0
     [[mc.fillna(0, inplace=True) for mc in sublist] for sublist in models_confounds]

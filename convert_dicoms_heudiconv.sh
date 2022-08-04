@@ -18,7 +18,7 @@ sub=$1
 
 # run  conversion
 echo "converting $1"
-heudiconv -d "${data_dir}/dicoms/{subject}/{subject}*/scans/*/resources/DICOM/files/*.dcm" \
+heudiconv -d "${data_dir}/sourcedata/dicoms/{subject}/*/scans/*/resources/DICOM/files/*.dcm" \
   -s $sub \
   -c dcm2niix \
   --bids \

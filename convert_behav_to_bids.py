@@ -120,7 +120,6 @@ if 'ToneLearning' in task_id:
                                 inplace=True)
             
             # save to output path
-            i_run += 1
             out_fpath = os.path.join(project_dir,
                                      'data_bids',
                                      'sub-%s'%subject_id, 'func',

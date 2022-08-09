@@ -54,8 +54,8 @@ if 'ToneLearning' in task_id:
         
         # define output path
         out_fpath = os.path.join(project_dir,
-                                 #'data_bids', 
-                                 #'sub-%s'%subject_id, 'func',
+                                 'data_bids', 
+                                 'sub-%s'%subject_id, 'func',
                                  'sub-%s_task-%s_run-%02d_events.tsv'%(subject_id, bids_task_list[0], rx+1))
         
         # create a temp dataframe of only trials where sounds were presented

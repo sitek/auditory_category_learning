@@ -47,7 +47,6 @@ if 'ToneLearning' in task_id:
     # define the time before the first stimulus starts
     first_stim_delay = first_acq + stim_delay
     
-    i_run = 0
     for rx, filename in enumerate(file_list):
         try:
             print('converting ', filename)
@@ -125,7 +124,7 @@ if 'ToneLearning' in task_id:
             out_fpath = os.path.join(project_dir,
                                      'data_bids',
                                      'sub-%s'%subject_id, 'func',
-                                     'sub-%s_task-%s_run-%02d_events.tsv'%(subject_id, bids_task_list[0], i_run))
+                                     'sub-%s_task-%s_run-%02d_events.tsv'%(subject_id, bids_task_list[0], rx+1))
             
             bids_df.to_csv(out_fpath, sep='\t')
             print('saved output to ', out_fpath)

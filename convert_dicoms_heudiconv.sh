@@ -1,6 +1,5 @@
 #!/bin/bash
-#SBATCH --mem=20G
-#SBATCH --time=6:00:00
+#SBATCH --time=4:00:00
 
 # convert dicoms to bids-standard niftis using heudiconv
 # KRS 2022.02.16
@@ -18,10 +17,10 @@ sub=$1
 
 # run  conversion
 echo "converting $1"
-heudiconv -d "${data_dir}/sourcedata/dicoms/{subject}/*/scans/*/resources/DICOM/files/*.dcm" \
+heudiconv -d "${data_dir}/sourcedata/dicoms/{subject}/*/scans/*/resources/DICOM/files/*" \
   -s $sub \
   -c dcm2niix \
   --bids \
   -ss 1 \
-  -o $data_dir/data_bids \
-  -f heuristic.py
+  -o $data_dir/data_bids_noIntendedFor \
+  -f heuristic_noIntendedFor.py

@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --time=2-00
+#SBATCH --time=3-00
 #SBATCH --mem=100G
-#SBATCH -c 8
+#SBATCH --cpus-per-task=12
 
 # Preprocess single-subject FLT data using fmriprep
 # in a Singularity container
@@ -37,7 +37,8 @@ sub=$1
 
 # copy from SBATCH arguments
 mem=100000
-nprocs=8
+nprocs=12
+omp_n=4
 
 # BEFORE RUNNING FOR THE FIRST TIME: 
 # build the fmriprep container to a singularity image
@@ -53,6 +54,6 @@ singularity run --cleanenv -B /bgfs:/bgfs $sing_img \
   --skip_bids_validation \
   -vv \
   --mem $mem \
-  --nprocs $nprocs \
+  --nprocs $nprocs --omp-nthreads $omp_n \
   --output-spaces T1w func fsnative MNI152NLin2009cAsym
 

@@ -1,5 +1,9 @@
 import os
 
+POPULATE_INTENDED_FOR_OPTS = {
+        'matching_parameters': ['ImagingVolume', 'Shims'],
+        'criterion': 'Closest'
+}
 
 def create_key(template, outtype=('nii.gz',), annotation_classes=None):
     if template is None or not template:
@@ -36,12 +40,10 @@ def infotodict(seqinfo):
     task_stgrid_sbref = create_key('sub-{subject}/func/sub-{subject}_task-stgrid_run-{item:02d}_sbref')
 
     # fieldmap paths done in BIDS format
-    #fieldmap_se_ap_mag = create_key('sub-{subject}/fmap/sub-{subject}_dir-AP_magnitude_run-{item:01d}_epi')
-    #fieldmap_se_ap_ph  = create_key('sub-{subject}/fmap/sub-{subject}_dir-AP_phasediff_run-{item:01d}_epi')
-    fieldmap_se_ap = create_key('sub-{subject}/fmap/sub-{subject}_dir-AP_run-{item:01d}_epi')
-    #fieldmap_se_pa_mag = create_key('sub-{subject}/fmap/sub-{subject}_dir-PA_magnitude_run-{item:01d}_epi')
-    #fieldmap_se_pa_ph  = create_key('sub-{subject}/fmap/sub-{subject}_dir-PA_phasediff_run-{item:01d}_epi')
-    fieldmap_se_pa = create_key('sub-{subject}/fmap/sub-{subject}_dir-PA_run-{item:01d}_epi')
+    fieldmap_se_ap = create_key('sub-{subject}/fmap/sub-{subject}_dir-AP_run-{item:02d}_epi')
+    fieldmap_se_pa = create_key('sub-{subject}/fmap/sub-{subject}_dir-PA_run-{item:02d}_epi')
+    
+    # SWI paths
     swi_mag = create_key('sub-{subject}/anat/sub-{subject}_part-magnitude_swi')
     swi_ph = create_key('sub-{subject}/anat/sub-{subject}_part-phase_swi')
     swi_mip = create_key('sub-{subject}/anat/sub-{subject}_rec-mIP_swi')
@@ -54,8 +56,6 @@ def infotodict(seqinfo):
             #mp2rage_uniT1den:[], 
             #mp2rage_div:[], mp2rage_head:[], 
             t1w:[],
-            #fieldmap_se_ap_mag:[], fieldmap_se_ap_ph:[],
-            #fieldmap_se_pa_mag:[], fieldmap_se_pa_ph:[],
             fieldmap_se_ap:[], fieldmap_se_pa:[],
             swi_mag:[], swi_ph:[], swi_mip:[], swi:[],
             task_tonecat:[], task_tonecat_sbref:[],
@@ -91,47 +91,31 @@ def infotodict(seqinfo):
             # fMRI task: tone learning
             if ('Tone Learning %d'%trx in s.series_description):
                 if ('FieldMap SE PA' in s.series_description):
-                    #if ('SBRef' in s.series_description):
-                    #    info[fieldmap_se_pa].append(s.series_id)
-                    if ('M' in s.image_type):
-                        info[fieldmap_se_pa].append(s.series_id)
-                    #    info[fieldmap_se_pa_mag].append(s.series_id)
-                    #elif ('P' in s.image_type):
-                    #    info[fieldmap_se_pa_ph].append(s.series_id)
+                    if ~('SBRef' in s.series_description):
+                        if ('M' in s.image_type):
+                            info[fieldmap_se_pa].append(s.series_id)
                 elif ('FieldMap SE AP' in s.series_description):
-                    #if ('SBRef' in s.series_description):
-                    #    info[fieldmap_se_ap].append(s.series_id)
-                    if ('M' in s.image_type):
-                        info[fieldmap_se_ap].append(s.series_id)
-                    #    info[fieldmap_se_ap_mag].append(s.series_id)
-                    #elif ('P' in s.image_type):
-                    #    info[fieldmap_se_ap_ph].append(s.series_id)
+                    if ~('SBRef' in s.series_description):
+                        if ('M' in s.image_type):
+                            info[fieldmap_se_ap].append(s.series_id)
                 elif ('SBRef' in s.series_description):
                         info[task_tonecat_sbref].append(s.series_id)
-                else:
+                elif (s.dim4 > 100): # a full run should have over 100 volumes
                         info[task_tonecat].append(s.series_id)
 
             # fMRI task: Spectrotemporal grid
             if ('STgrid %d'%trx in s.series_description):
                 if ('FieldMap SE PA' in s.series_description):
-                    #if ('SBRef' in s.series_description):
-                    #    info[fieldmap_se_pa].append(s.series_id)
-                    if ('M' in s.image_type):
-                        info[fieldmap_se_pa].append(s.series_id)
-                    #    info[fieldmap_se_pa_mag].append(s.series_id)
-                    #elif ('P' in s.image_type):
-                    #    info[fieldmap_se_pa_ph].append(s.series_id)
+                    if ~('SBRef' in s.series_description):
+                        if ('M' in s.image_type):
+                            info[fieldmap_se_pa].append(s.series_id)
                 elif ('FieldMap SE AP' in s.series_description):
-                    #if ('SBRef' in s.series_description):
-                    #    info[fieldmap_se_ap].append(s.series_id)
-                    if ('M' in s.image_type):
-                        info[fieldmap_se_ap].append(s.series_id)
-                    #    info[fieldmap_se_ap_mag].append(s.series_id)
-                    #elif ('P' in s.image_type):
-                    #    info[fieldmap_se_ap_ph].append(s.series_id)
+                    if ~('SBRef' in s.series_description):
+                        if ('M' in s.image_type):
+                            info[fieldmap_se_ap].append(s.series_id)
                 elif ('SBRef' in s.series_description):
                         info[task_stgrid_sbref].append(s.series_id)
-                else:
+                elif (s.dim4 > 100): # a full run should have over 100 volumes
                         info[task_stgrid].append(s.series_id)
 
         '''

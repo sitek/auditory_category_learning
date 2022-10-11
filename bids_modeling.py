@@ -39,7 +39,8 @@ event_type=args.event_type
 t_acq = args.t_acq
 
 project_dir = os.path.join('/bgfs/bchandrasekaran/krs228/data/', 'FLT/')
-bidsroot = os.path.join(project_dir,'data_bids')
+#bidsroot = os.path.join(project_dir,'data_bids')
+bidsroot = os.path.join(project_dir,'data_bids_TEMP')
 deriv_dir = os.path.join(project_dir, 'derivatives')
 
 nilearn_dir = os.path.join(deriv_dir, 'nilearn')
@@ -77,11 +78,12 @@ def prep_models_and_args(subject_id, task_id, fwhm, bidsroot, deriv_dir, event_t
     slice_time_ref = 0.5 * t_acq / t_r
 
     print(data_dir, task_label, space_label)
+    
     models, models_run_imgs, models_events, models_confounds = first_level_from_bids(data_dir, task_label, space_label,
                                                                                     smoothing_fwhm=fwhm_sub,
                                                                                     derivatives_folder=derivatives_folder,
                                                                                     slice_time_ref=slice_time_ref)
-
+    
     # fill n/a with 0
     [[mc.fillna(0, inplace=True) for mc in sublist] for sublist in models_confounds]
 
@@ -345,8 +347,9 @@ def transform_atlas_mni_to_t1w(t1w_fpath, atlas_fpath, transform_fpath):
 all_files, t1w_fpath, bold_files = import_bids_data(bidsroot)
 
 model_and_args, stim_list = prep_models_and_args(subject_id, task_id, fwhm, bidsroot, 
-                                                 deriv_dir, event_type, space_label)
+                                                 deriv_dir, event_type, t_r, t_acq, space_label)
 zmap_fpath, contrast_label = nilearn_glm_per_run(model_and_args, stim_list)
 z_maps, conditions = generate_conditions(subject_id, fwhm, space_label, deriv_dir)
 decoder_img_fpath_list = region_decoding(subject_id, space_label, z_maps, conditions, mask_descrip, n_runs)
 masked_data_fpath, conditions_fpath = save_masked_conditions_timeseries(mask, z_maps, out_dir)
+

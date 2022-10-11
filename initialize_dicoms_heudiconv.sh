@@ -18,7 +18,7 @@ sub=$1
 
 # run preliminary conversion to get dicom info table
 echo "running heudiconv setup on $1"
-heudiconv -d "${data_dir}/dicoms/{subject}/{subject}*/scans/*/resources/DICOM/files/*.dcm" \
+heudiconv -d "${data_dir}/sourcedata/dicoms/{subject}/{subject}*/scans/*/resources/DICOM/files/*.dcm" \
   -s $sub \
   -c none -b \
   -ss 1 \

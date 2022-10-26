@@ -111,6 +111,7 @@ def prep_models_and_args(subject_id=None, task_id=None, fwhm=None, bidsroot=None
 
         # create stimulus list from updated events.tsv file
         stim_list = sorted([s for s in run_events['trial_type'].unique() if str(s) != 'nan'])
+        print(stim_list)
     
     # trial-specific events
     if event_type == 'trial':
@@ -178,6 +179,7 @@ def nilearn_glm_across_runs(stim_list, task_label, models, models_run_imgs, \
                 print('computing contrast of interest')
                 summary_statistics = model.compute_contrast(contrast_label, output_type='all')
                 zmap = summary_statistics['z_score']
+                tmap = summary_statistics['stat']
                 statmap = summary_statistics['effect_size']
 
                 # save z map
@@ -196,7 +198,12 @@ def nilearn_glm_across_runs(stim_list, task_label, models, models_run_imgs, \
                                         analysis_prefix+'_zmap.nii.gz')
                 nib.save(zmap, zmap_fpath)
                 print('saved z map to ', zmap_fpath)
-
+                
+                # save t map
+                tmap_fpath = os.path.join(nilearn_sub_dir,
+                                        analysis_prefix+'_map-tstat.nii.gz')
+                nib.save(tmap, tmap_fpath)
+                print('saved t map to ', tmap_fpath)
                 # also save beta maps
                 statmap_fpath = os.path.join(nilearn_sub_dir,
                                             analysis_prefix+'_map-beta.nii.gz')
@@ -224,12 +231,12 @@ nilearn_dir = os.path.join(deriv_dir, 'nilearn')
 if not os.path.exists(nilearn_dir):
         os.makedirs(nilearn_dir)
         
-# Multivariate analysis: T1w space, 1.5 mm, across-run GLM
+# Multivariate analysis: across-run GLM
 print('running with subject ', subject_id)
 
 stim_list, models, models_run_imgs, \
     models_events, models_confounds, \
-    conf_keep_list = prep_models_and_args(subject_id, task_label, 1.5, bidsroot, 
+    conf_keep_list = prep_models_and_args(subject_id, task_label, fwhm, bidsroot, 
                                           deriv_dir, event_type, t_r, t_acq, 
                                           space_label=space_label)
 print('stim list: ', stim_list)

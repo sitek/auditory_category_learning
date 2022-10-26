@@ -28,8 +28,6 @@ task_id = args.task
 
 project_dir = os.path.abspath('/bgfs/bchandrasekaran/krs228/data/FLT/')
 behav_dir   = os.path.join(project_dir, 'sourcedata', 'behav_files', 'CHA-IBR/')
-#project_dir = os.path.join('/Users/krs228', 'data', 'FLT')
-#behav_dir = os.path.join('/Users/krs228/','OneDrive - University of Pittsburgh/','CHA-IBR/')
 
 # bids task names
 bids_task_list = ['tonecat', 'stgrid']
@@ -95,7 +93,7 @@ if 'ToneLearning' in task_id:
                 resp_df.onset = trial_df['sound_1.started'] + trial_df['key_resp.rt']  - (trial_df['sound_1.started'].iloc[0]-first_stim_delay)
 
                 # define duration (arbitrary)
-                resp_df.duration = 0.1
+                resp_df.duration = 0.5
 
                 resp_df.response_time = trial_df['key_resp.rt']        
                 resp_df.correct_key = trial_df['corrAns']

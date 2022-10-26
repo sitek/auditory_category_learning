@@ -186,7 +186,7 @@ def nilearn_glm_per_run(stim_list, task_label, event_filter, models, models_run_
                         print('computing contrast of interest', ' with contrast label = ', contrast_label)
                         statmap = model.compute_contrast(contrast_label, output_type='effect_size')
 
-                        # save z map
+                        # save stat map
                         print('saving beta map')
                         nilearn_sub_dir = os.path.join(bidsroot, 'derivatives', 'nilearn', 
                                                     'level-1_fwhm-%.02f'%model.smoothing_fwhm, 
@@ -220,13 +220,13 @@ nilearn_dir = os.path.join(deriv_dir, 'nilearn')
 if not os.path.exists(nilearn_dir):
         os.makedirs(nilearn_dir)
         
-# Multivariate analysis: T1w space, 1.5 mm, across-run GLM
+# Multivariate analysis: across-run GLM
 print('running with subject ', subject_id)
 event_type = 'stimulus'
 event_filter = 'sound'
         
 stim_list, models, models_run_imgs, \
-    models_events, models_confounds, conf_keep_list = prep_models_and_args(subject_id, task_label, 1.5, bidsroot, 
+    models_events, models_confounds, conf_keep_list = prep_models_and_args(subject_id, task_label, fwhm, bidsroot, 
                                                                            deriv_dir, event_type, t_r, t_acq, 
                                                                            space_label=space_label)
 print('stim list: ', stim_list)

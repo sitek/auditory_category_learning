@@ -1,6 +1,6 @@
 Processing and analyzing tone-learning fMRI data. WIP - KRS 2022.10
 
-*Processing pipeline*
+##Processing pipeline
 
 **Dicom conversion: `./dicom_conversion/`**
 1. Peek at the dicom .tsv file  using `initialize_dicoms_heudiconv.sh`
@@ -21,10 +21,10 @@ Processing and analyzing tone-learning fMRI data. WIP - KRS 2022.10
 **Multivariate analysis: `./multivariate/`**
 1. Create trial-specific beta estimates with `modeling_firstlevel_singleevent.py` 
 
-(Note: depending on the stimulus set, this will yield different results than `modeling_first_level_stimulus_perrun.py`. 
-For our 16-stimulus set, we repeat each sound 3 times per run, so these outputs would be different. 
-For the 40-stimulus set, each sound is only used once per run, so the estimates would be the same 
- [although the output names would be different].)
+> (Note: depending on the stimulus set, this will yield different results than `modeling_first_level_stimulus_perrun.py`. 
+> For our 16-stimulus set, we repeat each sound 3 times per run, so these outputs would be different. 
+> For the 40-stimulus set, each sound is only used once per run, so the estimates would be the same 
+> [although the output names would be different].)
 
 2. Create grey matter mask for searchlight using `make_gm_mask.py` (WIP)
 3. Run whole-brain searchlight with `multivariate_searchlight.py`

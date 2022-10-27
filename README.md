@@ -1,23 +1,23 @@
 Processing and analyzing tone-learning fMRI data. WIP - KRS 2022.10
 
-**Processing pipeline**
-***Dicom conversion***
+*Processing pipeline*
+**Dicom conversion**
 1. Peek at the dicom .tsv file  using `initialize_dicoms_heudiconv.sh`
 2. Create `heuristic.py` based on your MRI sequences
 3. Convert dicoms to .nii using `convert_dicoms_heudiconv.sh`
 
-***MRI preprocessing***
+**MRI preprocessing**
 1. Preprocess anatomical and functional MRI with `run_fmriprep.sh` 
 (Note: this runs using a Singularity image, so may need to create that first)
 
-***Behavioral data conversion***
+**Behavioral data conversion**
 1. Run `convert_behav_to_bids.py` to get psychopy outputs into BIDS-compatible format
 
-***Univariate analysis***
+**Univariate analysis**
 1. Run `univariate_analysis.py`
 2. (Not yet implemented) Group-level univariate statistics
 
-***Multivariate analysis***
+**Multivariate analysis**
 1. Create trial-specific beta estimates with `modeling_firstlevel_singleevent.py` 
 
 (Note: depending on the stimulus set, this will yield different results than `modeling_first_level_stimulus_perrun.py`. 

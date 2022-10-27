@@ -1,6 +1,7 @@
 Processing and analyzing tone-learning fMRI data. WIP - KRS 2022.10
 
 *Processing pipeline*
+
 **Dicom conversion**
 1. Peek at the dicom .tsv file  using `initialize_dicoms_heudiconv.sh`
 2. Create `heuristic.py` based on your MRI sequences

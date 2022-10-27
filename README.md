@@ -1,6 +1,6 @@
 Processing and analyzing tone-learning fMRI data. WIP - KRS 2022.10
 
-##Processing pipeline
+## Processing pipeline
 
 **Dicom conversion: `./dicom_conversion/`**
 1. Peek at the dicom .tsv file  using `initialize_dicoms_heudiconv.sh`
@@ -9,7 +9,7 @@ Processing and analyzing tone-learning fMRI data. WIP - KRS 2022.10
 
 **MRI preprocessing: `./fmriprep/`**
 1. Preprocess anatomical and functional MRI with `run_fmriprep.sh` 
-(Note: this runs using a Singularity image, so may need to create that first)
+> (Note: this runs using a Singularity image, so may need to create that first)
 
 **Behavioral data conversion: `./behav_conversion/`**
 1. Run `convert_behav_to_bids.py` to get psychopy outputs into BIDS-compatible format

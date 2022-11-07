@@ -69,7 +69,6 @@ if 'ToneLearning' in task_id:
                 stim_df.onset = trial_df['sound_1.started'] - (trial_df['sound_1.started'].iloc[0]-first_stim_delay)
 
                 # define duration
-                # stim_df.duration = trial_df['sound_1.stopped'].astype(np.float16) - trial_df['sound_1.started'].astype(np.float16)
                 stim_df.duration = 0.3
 
                 # define stimulus type (based on sound file – HARDCODED)
@@ -135,9 +134,9 @@ if 'ToneLearning' in task_id:
             pass
 
 
-### WORK IN PROGRESS
+''' Spectrotemporal grid stimulus task '''
 elif 'STgrid' in task_id:
-    stim_delay = 0.2
+    stim_delay = 0.4
 
     # define the time before the first stimulus starts
     first_stim_delay = first_acq + stim_delay
@@ -146,39 +145,46 @@ elif 'STgrid' in task_id:
         print('converting ', filename)
         fpath = os.path.join(behav_dir, filename)
         df = pd.read_csv(fpath)
-        
-        # define output path
-        out_fpath = os.path.join(project_dir, 'data_bids', 'sub-%s'%subject_id, 'func',
-                                    'sub-%s_task-%s_run-%02d_events.tsv'%(subject_id, bids_task_list[1], rx+1))
-        
-        # set up dataframe
-        bids_df = pd.DataFrame(columns=['onset', 'duration', 'trial_type',
-                                        'response_time', 'stim_file', 'feedback'])
-        
-        bids_df.onset = df['sound_stimulus.started']-(df['sound_stimulus.started'][1]-first_stim_delay)
-        bids_df.duration[df['sound_stimulus.started']>0] = 1.0
 
-        bids_df.trial_type[df['sound_stimulus.started'] > 0]   = 'sound'
-        bids_df.trial_type[df.soundFile == 'stimuli/null.wav'] = 'silent'
-    
-        # define response time (minus stim delay)
-        bids_df.response_time = df['key_resp.rt'] - stim_delay
-        
-        bids_df.stim_file = df.soundFile
-    
-        # drop the first row if it's not a stimulus
-        try:
-            # is an error if index has been removed
-            pd.isna(bids_df.stim_file[0]) 
-            bids_df.drop(axis=0, index=0, inplace=True)
-        except:
-            pass
-        
-        # remove null trials (only model stimuli)
-        #bids_df = bids_df[bids_df.stim_file != 'stimuli/null.wav']
-        
-        print(bids_df)
-        
-        # save to output path
-        bids_df.to_csv(out_fpath, sep='\t')
-        print('saved output to ', out_fpath)
+        if len(df) < 30:
+            print('too few trials. skipping')
+        else:
+            # define output path
+            out_fpath = os.path.join(project_dir, 'data_bids_noIntendedFor', 
+                                     'sub-%s'%subject_id, 'func',
+                                     'sub-%s_task-%s_run-%02d_events.tsv'%(subject_id, bids_task_list[1], rx+1))
+
+            # set up dataframe
+            bids_df = pd.DataFrame(columns=['onset', 'duration', 'trial_type',
+                                            'response_time', 'stim_file'])
+
+            bids_df.onset = df['sound_stimulus.started']-(df['sound_stimulus.started'][1]-first_stim_delay)
+            bids_df.duration[df['sound_stimulus.started']>0] = 1.0
+
+            #bids_df.trial_type[df['sound_stimulus.started'] > 0]   = 'sound'
+            #bids_df.trial_type[df.soundFile == 'stimuli/null.wav'] = 'silent'
+            for sx, stim in enumerate(df.soundFile):
+                if isinstance(stim, str):
+                    if 'S15' in stim:
+                        bids_df.trial_type[sx] = '_'.join(stim.split('_')[2:4]) 
+                    elif 'null' in stim:
+                        bids_df.trial_type[sx] = 'null'
+
+            # define response time (minus stim delay)
+            bids_df.response_time = df['key_resp.rt'] - stim_delay
+
+            bids_df.stim_file = df.soundFile
+
+            # drop the first row if it's not a stimulus
+            try:
+                # is an error if index has been removed
+                pd.isna(bids_df.stim_file[0]) 
+                bids_df.drop(axis=0, index=0, inplace=True)
+            except:
+                pass
+
+            bids_df.head()
+
+            # save to output path
+            bids_df.to_csv(out_fpath, sep='\t')
+            print('saved output to ', out_fpath)

@@ -95,13 +95,11 @@ def prep_models_and_args(subject_id=None, task_id=None, fwhm=None, bidsroot=None
                     'trans_x', 'trans_y', 'trans_z', 
                     'rot_x','rot_y', 'rot_z']
 
-    ''' create events '''
-    # stimulus events
-    if event_type == 'stimulus':
-        for sx, sub_events in enumerate(models_events):
-            print(models[sx].subject_label)
-            for mx, run_events in enumerate(sub_events):
-
+     ''' create events '''
+    for sx, sub_events in enumerate(models_events):        
+        for mx, run_events in enumerate(sub_events):
+            # stimulus events
+            if event_type == 'stimulus':
                 name_groups = run_events.groupby('trial_type')['trial_type']
                 suffix = name_groups.cumcount() + 1
                 repeats = name_groups.transform('size')
@@ -109,15 +107,8 @@ def prep_models_and_args(subject_id=None, task_id=None, fwhm=None, bidsroot=None
                 run_events['trial_type'] = run_events['trial_type']
                 run_events['trial_type'] = run_events['trial_type'].str.replace('-','_')
 
-        # create stimulus list from updated events.tsv file
-        stim_list = sorted([s for s in run_events['trial_type'].unique() if str(s) != 'nan'])
-    
-    # trial-specific events
-    if event_type == 'trial':
-        for sx, sub_events in enumerate(models_events):
-            print(models[sx].subject_label)
-            for mx, run_events in enumerate(sub_events):
-
+            # trial-specific events          
+            if event_type == 'trial':
                 name_groups = run_events.groupby('trial_type')['trial_type']
                 suffix = name_groups.cumcount() + 1
                 repeats = name_groups.transform('size')
@@ -126,23 +117,20 @@ def prep_models_and_args(subject_id=None, task_id=None, fwhm=None, bidsroot=None
                                                     '_trial' + suffix.map(str)
                 run_events['trial_type'] = run_events['trial_type'].str.replace('-','_')
 
-        # create stimulus list from updated events.tsv file
-        stim_list = sorted([s for s in run_events['trial_type'].unique() if str(s) != 'nan'])
-
-    # all sound events
-    elif event_type == 'sound':
-        for sx, sub_events in enumerate(models_events):
-            print(models[sx].subject_label)
-            for mx, run_events in enumerate(sub_events):
-                orig_stim_list = sorted([str(s) for s in run_events['trial_type'].unique() if str(s) not in ['nan', 'None']])
-                print('original stim list: ', orig_stim_list)
+            # all sound events
+            elif event_type == 'sound':
+                orig_stim_list = sorted([str(s) for s in run_events['trial_type'].unique() 
+                                         if str(s) not in ['nan', 'None', 'null']])
+                #print('original stim list: ', orig_stim_list)
 
                 run_events['trial_type'] = run_events.trial_type.str.split('_', expand=True)[0]
 
+            # re-assign to models_events
+            models_events[sx][mx] = run_events
+            
         # create stimulus list from updated events.tsv file
         stim_list = sorted([str(s) for s in run_events['trial_type'].unique() if str(s) not in ['nan', 'None']])
-        print('stim list: ', stim_list)
-
+    
     #model_and_args = zip(models, models_run_imgs, models_events, models_confounds)
     return stim_list, models, models_run_imgs, models_events, models_confounds, conf_keep_list
 

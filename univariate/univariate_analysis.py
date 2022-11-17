@@ -13,19 +13,38 @@ from nilearn import plotting
 
 parser = argparse.ArgumentParser(
                 description='Subject-level modeling of fmriprep-preprocessed data',
-                epilog=('Example: python univariate_analysis.py --sub=FLT02 --task=tonecat '
-                        '--space=MNI152NLin2009cAsym --fwhm=1.5 --event_type=sound --t_acq=1 --t_r=2')
+                epilog=('Example: python univariate_analysis.py --sub=FLT02 '
+                        '--task=tonecat --space=MNI152NLin2009cAsym '
+                        '--fwhm=3 --event_type=sound --t_acq=2 --t_r=3 '
+                        '--bidsroot=/PATH/TO/BIDS/DIR/ '
+                        '--fmriprep_dir=/PATH/TO/FMRIPREP/DIR/')
                 )
 
-parser.add_argument("--sub", help="participant id", type=str)
-parser.add_argument("--task", help="task id", type=str)
-parser.add_argument("--space", help="space label", type=str)
-parser.add_argument("--fwhm", help="spatial smoothing full-width half-max", type=float)
-parser.add_argument("--event_type", help="what to model (options: `stimulus` or `feedback`)", type=str)
-parser.add_argument("--t_acq", help=("BOLD acquisition time (if different from repetition time [TR],"
-                                     " as in sparse designs)"), type=float)
-parser.add_argument("--t_r", help="BOLD repetition time", type=float)
-
+parser.add_argument("--sub", 
+                    help="participant id", type=str)
+parser.add_argument("--task", 
+                    help="task id", type=str)
+parser.add_argument("--space", 
+                    help="space label", type=str)
+parser.add_argument("--fwhm", 
+                    help="spatial smoothing full-width half-max", 
+                    type=float)
+parser.add_argument("--event_type", 
+                    help="what to model (options: `stimulus` or `feedback`)", 
+                    type=str)
+parser.add_argument("--t_acq", 
+                    help=("BOLD acquisition time (if different from "
+                          "repetition time [TR], as in sparse designs)"), 
+                    type=float)
+parser.add_argument("--t_r", 
+                    help="BOLD repetition time", 
+                    type=float)
+parser.add_argument("--bidsroot", 
+                    help="top-level directory of the BIDS dataset", 
+                    type=str)
+parser.add_argument("--fmriprep_dir", 
+                    help="directory of the fMRIprep preprocessed dataset", 
+                    type=str)
 
 args = parser.parse_args()
 
@@ -73,17 +92,18 @@ def prep_models_and_args(subject_id=None, task_id=None, fwhm=None, bidsroot=None
     # correct the fmriprep-given slice reference (middle slice, or 0.5)
     # to account for sparse acquisition (silent gap during auditory presentation paradigm)
     # fmriprep is explicitly based on slice timings, while nilearn is based on t_r
-    # and since images are only collected during a portion of the overall t_r (which includes the silent gap),
-    # we need to account for this
+    # and since images are only collected during a portion of the overall t_r 
+    # (which includes the silent gap), we need to account for this
     slice_time_ref = 0.5 * t_acq / t_r
 
     print(data_dir, task_label, space_label)
 
-    models, models_run_imgs, models_events, models_confounds = first_level_from_bids(data_dir, task_label, space_label,
-                                                                                     [subject_id],
-                                                                                     smoothing_fwhm=fwhm,
-                                                                                     derivatives_folder=deriv_dir,
-                                                                                     slice_time_ref=slice_time_ref)
+    models, models_run_imgs, \
+            models_events, models_confounds = first_level_from_bids(data_dir, task_label, 
+                                                                    space_label, [subject_id],
+                                                                    smoothing_fwhm=fwhm,
+                                                                    derivatives_folder=deriv_dir,
+                                                                    slice_time_ref=slice_time_ref)
 
     # fill n/a with 0
     [[mc.fillna(0, inplace=True) for mc in sublist] for sublist in models_confounds]
@@ -98,7 +118,7 @@ def prep_models_and_args(subject_id=None, task_id=None, fwhm=None, bidsroot=None
                     'trans_x', 'trans_y', 'trans_z', 
                     'rot_x','rot_y', 'rot_z']
 
-     ''' create events '''
+    ''' create events '''
     for sx, sub_events in enumerate(models_events):        
         for mx, run_events in enumerate(sub_events):
             # stimulus events
@@ -209,25 +229,23 @@ def nilearn_glm_across_runs(stim_list, task_label, models, models_run_imgs, \
 
 ''' run the pipeline '''
 
-project_dir = os.path.join('/bgfs/bchandrasekaran/krs228/data/', 'FLT/')
-bidsroot = os.path.join(project_dir,'data_bids_noIntendedFor')
-deriv_dir = os.path.join(project_dir, 'derivatives', 'fmriprep_noSDC')
+#project_dir = os.path.join('/bgfs/bchandrasekaran/krs228/data/', 'FLT/')
+#bidsroot = os.path.join(project_dir,'data_bids_noIntendedFor')
+#fmriprep_dir = os.path.join(project_dir, 'derivatives', 'fmriprep_noSDC')
 
-nilearn_dir = os.path.join(deriv_dir, 'nilearn')
-if not os.path.exists(nilearn_dir):
-        os.makedirs(nilearn_dir)
-        
 print('Running subject ', subject_id)
 # Univariate analysis: MNI space, 3 mm, across-run GLM
 stim_list, models, models_run_imgs, models_events, \
            models_confounds, conf_keep_list = prep_models_and_args(subject_id, 
                                                                    task_label, 
                                                                    fwhm, bidsroot, 
-                                                                   deriv_dir, 'sound',
+                                                                   fmriprep_dir, 
+                                                                   event_type,
                                                                    t_r, t_acq, 
                                                                    space_label)
 # Across-run GLM
-zmap_fpath, statmap_fpath, contrast_label = nilearn_glm_across_runs(stim_list, task_label, 
-                                                                    models, models_run_imgs, 
-                                                                    models_events, models_confounds, 
-                                                                    conf_keep_list, space_label)
+zmap_fpath, statmap_fpath, \
+            contrast_label = nilearn_glm_across_runs(stim_list, task_label, 
+                                                     models, models_run_imgs, 
+                                                     models_events, models_confounds, 
+                                                     conf_keep_list, space_label)

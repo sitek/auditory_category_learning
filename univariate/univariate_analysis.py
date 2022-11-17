@@ -13,15 +13,17 @@ from nilearn import plotting
 
 parser = argparse.ArgumentParser(
                 description='Subject-level modeling of fmriprep-preprocessed data',
-                epilog='Example: python univariate_analysis.py --sub=FLT02 --task=tonecat --space=T1w --fwhm=1.5 --event_type=sound --t_acq=1 --t_r=2'
-        )
+                epilog=('Example: python univariate_analysis.py --sub=FLT02 --task=tonecat '
+                        '--space=MNI152NLin2009cAsym --fwhm=1.5 --event_type=sound --t_acq=1 --t_r=2')
+                )
 
 parser.add_argument("--sub", help="participant id", type=str)
 parser.add_argument("--task", help="task id", type=str)
 parser.add_argument("--space", help="space label", type=str)
 parser.add_argument("--fwhm", help="spatial smoothing full-width half-max", type=float)
 parser.add_argument("--event_type", help="what to model (options: `stimulus` or `feedback`)", type=str)
-parser.add_argument("--t_acq", help="BOLD acquisition time (if different from repetition time [TR], as in sparse designs)", type=float)
+parser.add_argument("--t_acq", help=("BOLD acquisition time (if different from repetition time [TR],"
+                                     " as in sparse designs)"), type=float)
 parser.add_argument("--t_r", help="BOLD repetition time", type=float)
 
 
@@ -57,7 +59,8 @@ def import_bids_data(bidsroot, subject_id, task_label):
 
 
 # ## nilearn modeling: first level
-# based on: https://nilearn.github.io/auto_examples/04_glm_first_level/plot_bids_features.html#sphx-glr-auto-examples-04-glm-first-level-plot-bids-features-py
+# based on: https://nilearn.github.io/auto_examples/04_glm_first_level/
+# plot_bids_features.html#sphx-glr-auto-examples-04-glm-first-level-plot-bids-features-py
 
 def prep_models_and_args(subject_id=None, task_id=None, fwhm=None, bidsroot=None, 
                          deriv_dir=None, event_type=None, t_r=None, t_acq=None, space_label='T1w'):
@@ -145,7 +148,6 @@ def nilearn_glm_across_runs(stim_list, task_label, models, models_run_imgs, \
             contrast_desc  = stim
 
 
-            midx = 0
             model = models[midx]
             imgs = models_run_imgs[midx]
             events = models_events[midx]
@@ -155,7 +157,7 @@ def nilearn_glm_across_runs(stim_list, task_label, models, models_run_imgs, \
 
             # set limited confounds
             print('selecting confounds')
-            confounds_ltd = [models_confounds[midx][cx][conf_keep_list] for cx in range(len(models_confounds[midx]))]
+            confounds_ltd = [confounds[cx][conf_keep_list] for cx in range(len(confounds))]
             
             try:
                 # fit the GLM
@@ -171,17 +173,19 @@ def nilearn_glm_across_runs(stim_list, task_label, models, models_run_imgs, \
                 # save z map
                 print('saving z-map')
                 nilearn_sub_dir = os.path.join(bidsroot, 'derivatives', 'nilearn', 
-                                            'level-1_fwhm-%.02f'%model.smoothing_fwhm, 
-                                            'sub-%s_space-%s'%(model.subject_label, space_label),
-                                            'run-all')
+                                               'level-1_fwhm-%.02f'%model.smoothing_fwhm, 
+                                               'sub-%s_space-%s'%(model.subject_label, space_label),
+                                               'run-all')
                 if not os.path.exists(nilearn_sub_dir):
                     os.makedirs(nilearn_sub_dir)
 
                 analysis_prefix = 'sub-%s_task-%s_fwhm-%.02f_space-%s_contrast-%s'%(model.subject_label,
-                                                                                    task_label, model.smoothing_fwhm,
-                                                                                    space_label, contrast_desc)
+                                                                                    task_label, 
+                                                                                    model.smoothing_fwhm,
+                                                                                    space_label, 
+                                                                                    contrast_desc)
                 zmap_fpath = os.path.join(nilearn_sub_dir,
-                                        analysis_prefix+'_zmap.nii.gz')
+                                        analysis_prefix+'_map-zscore.nii.gz')
                 nib.save(zmap, zmap_fpath)
                 print('saved z map to ', zmap_fpath)
 
@@ -215,12 +219,13 @@ if not os.path.exists(nilearn_dir):
         
 print('Running subject ', subject_id)
 # Univariate analysis: MNI space, 3 mm, across-run GLM
-stim_list, models, models_run_imgs, \
-    models_events, models_confounds, conf_keep_list = prep_models_and_args(subject_id, task_label, 
-                                                                             fwhm, bidsroot, 
-                                                                             deriv_dir, 'sound',
-                                                                             t_r, t_acq, 
-                                                                             space_label)
+stim_list, models, models_run_imgs, models_events, \
+           models_confounds, conf_keep_list = prep_models_and_args(subject_id, 
+                                                                   task_label, 
+                                                                   fwhm, bidsroot, 
+                                                                   deriv_dir, 'sound',
+                                                                   t_r, t_acq, 
+                                                                   space_label)
 # Across-run GLM
 zmap_fpath, statmap_fpath, contrast_label = nilearn_glm_across_runs(stim_list, task_label, 
                                                                     models, models_run_imgs, 

@@ -10,7 +10,7 @@ import nibabel as nib
 from glob import glob
 from nilearn import plotting
 
-
+''' Set up and interpret command line arguments '''
 parser = argparse.ArgumentParser(
                 description='Subject-level modeling of fmriprep-preprocessed data',
                 epilog=('Example: python univariate_analysis.py --sub=FLT02 '
@@ -60,6 +60,8 @@ fwhm = args.fwhm
 event_type=args.event_type
 t_acq = args.t_acq
 t_r = args.t_r
+bidsroot = args.bidsroot
+fmriprep_dir = args.fmriprep_dir
 
 
 # ### import data with `pybids` 
@@ -228,10 +230,6 @@ def nilearn_glm_across_runs(stim_list, task_label, models, models_run_imgs, \
     return zmap_fpath, statmap_fpath, contrast_label
 
 ''' run the pipeline '''
-
-#project_dir = os.path.join('/bgfs/bchandrasekaran/krs228/data/', 'FLT/')
-#bidsroot = os.path.join(project_dir,'data_bids_noIntendedFor')
-#fmriprep_dir = os.path.join(project_dir, 'derivatives', 'fmriprep_noSDC')
 
 print('Running subject ', subject_id)
 # Univariate analysis: MNI space, 3 mm, across-run GLM

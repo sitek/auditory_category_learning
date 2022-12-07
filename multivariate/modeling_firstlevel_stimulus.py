@@ -11,19 +11,41 @@ import nibabel as nib
 from glob import glob
 from nilearn import plotting
 
-''' Input parsing '''
+''' Set up and interpret command line arguments '''
 parser = argparse.ArgumentParser(
                 description='Subject-level modeling of fmriprep-preprocessed data',
-                epilog='Example: python bids_modeling.py --sub=FLT02 --task=tonecat --space=T1w --fwhm=1.5 --event_type=sound --t_acq=2 --t_r=3'
-        )
+                epilog=('Example: python modeling_firstlevel_stimulus.py --sub=FLT02 '
+                        '--task=tonecat --space=MNI152NLin2009cAsym '
+                        '--fwhm=3 --event_type=sound --t_acq=2 --t_r=3 '
+                        '--bidsroot=/PATH/TO/BIDS/DIR/ '
+                        '--fmriprep_dir=/PATH/TO/FMRIPREP/DIR/')
+                )
 
-parser.add_argument("--sub", help="participant id", type=str)
-parser.add_argument("--task", help="task id", type=str)
-parser.add_argument("--space", help="space label", type=str)
-parser.add_argument("--fwhm", help="spatial smoothing full-width half-max", type=float)
-parser.add_argument("--event_type", help="what to model (options: `stimulus` or `feedback`)", type=str)
-parser.add_argument("--t_acq", help="BOLD acquisition time (if different from repetition time [TR], as in sparse designs)", type=float)
-parser.add_argument("--t_r", help="BOLD repetition time", type=float)
+parser.add_argument("--sub", 
+                    help="participant id", type=str)
+parser.add_argument("--task", 
+                    help="task id", type=str)
+parser.add_argument("--space", 
+                    help="space label", type=str)
+parser.add_argument("--fwhm", 
+                    help="spatial smoothing full-width half-max", 
+                    type=float)
+parser.add_argument("--event_type", 
+                    help="what to model (options: `sound` or `stimulus` or `feedback`)", 
+                    type=str)
+parser.add_argument("--t_acq", 
+                    help=("BOLD acquisition time (if different from "
+                          "repetition time [TR], as in sparse designs)"), 
+                    type=float)
+parser.add_argument("--t_r", 
+                    help="BOLD repetition time", 
+                    type=float)
+parser.add_argument("--bidsroot", 
+                    help="top-level directory of the BIDS dataset", 
+                    type=str)
+parser.add_argument("--fmriprep_dir", 
+                    help="directory of the fMRIprep preprocessed dataset", 
+                    type=str)
 
 args = parser.parse_args()
 
@@ -39,6 +61,8 @@ fwhm = args.fwhm
 event_type=args.event_type
 t_acq = args.t_acq
 t_r = args.t_r
+bidsroot = args.bidsroot
+fmriprep_dir = args.fmriprep_dir
 
 
 ''' import data with `pybids` '''
@@ -222,22 +246,13 @@ def nilearn_glm_across_runs(stim_list, task_label, models, models_run_imgs, \
                 print('could not run for ', contrast_label)
     return zmap_fpath, statmap_fpath, contrast_label
 
-project_dir = os.path.join('/bgfs/bchandrasekaran/krs228/data/', 'FLT/')
-#bidsroot = os.path.join(project_dir,'data_bids')
-bidsroot = os.path.join(project_dir,'data_bids_noIntendedFor')
-deriv_dir = os.path.join(project_dir, 'derivatives', 'fmriprep_noSDC')
-
-nilearn_dir = os.path.join(deriv_dir, 'nilearn')
-if not os.path.exists(nilearn_dir):
-        os.makedirs(nilearn_dir)
-        
-# Multivariate analysis: across-run GLM
+''' Multivariate analysis: across-run GLM '''
 print('running with subject ', subject_id)
 
 stim_list, models, models_run_imgs, \
     models_events, models_confounds, \
     conf_keep_list = prep_models_and_args(subject_id, task_label, fwhm, bidsroot, 
-                                          deriv_dir, event_type, t_r, t_acq, 
+                                          fmriprep_dir, event_type, t_r, t_acq, 
                                           space_label=space_label)
 print('stim list: ', stim_list)
 statmap_fpath, contrast_label = nilearn_glm_across_runs(stim_list, task_label, 

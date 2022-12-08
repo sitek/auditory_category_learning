@@ -12,14 +12,27 @@ from nilearn.image import new_img_like
 
 parser = argparse.ArgumentParser(
                 description='Subject-level multivariate searchlight analysis',
-                epilog='Example: python multivariate_searchlight.py --sub=FLT02 --space=MNI152NLin2009cAsym --fwhm=1.5 --cond=tone --searchrad=4.5'
+                epilog=('Example: python multivariate_searchlight.py --sub=FLT02 '
+                        ' --space=MNI152NLin2009cAsym --fwhm=1.5 --cond=tone --searchrad=4.5'
+                        ' --bidsroot=/PATH/TO/BIDS/DIR/ --fmriprep_dir=/PATH/TO/FMRIPREP/DIR/')
         )
 
-parser.add_argument("--sub", help="participant id", type=str)
-parser.add_argument("--space", help="space label", type=str)
-parser.add_argument("--fwhm", help="spatial smoothing full-width half-max", type=float)
-parser.add_argument("--cond", help="condition to analyze", type=str)
-parser.add_argument("--searchrad", help="searchlight radius (in voxels)", type=str)
+parser.add_argument("--sub", help="participant id", 
+                    type=str)
+parser.add_argument("--space", help="space label", 
+                    type=str)
+parser.add_argument("--fwhm", help="spatial smoothing full-width half-max", 
+                    type=float)
+parser.add_argument("--cond", help="condition to analyze", 
+                    type=str)
+parser.add_argument("--searchrad", help="searchlight radius (in voxels)", 
+                    type=str)
+parser.add_argument("--bidsroot", 
+                    help="top-level directory of the BIDS dataset", 
+                    type=str)
+parser.add_argument("--fmriprep_dir", 
+                    help="directory of the fMRIprep preprocessed dataset", 
+                    type=str)
 
 args = parser.parse_args()
 
@@ -33,18 +46,11 @@ space_label=args.space
 fwhm = args.fwhm
 cond_label = args.cond
 searchlight_radius = args.searchrad
+bidsroot = args.bidsroot
+fmriprep_dir = args.fmriprep_dir
 
 ''' define other inputs '''
-# overall directory
-project_dir = os.path.join('/bgfs/bchandrasekaran/krs228/data/', 'FLT/')
-
-# fmriprep directory (for anat/masks)
-fmriprep_dir = os.path.join(project_dir, 'derivatives', 'fmriprep_noSDC')
-
-# nilearn derivative directory (is inside BIDS directory, unlike fmriprep dir)
-bidsroot = os.path.join(project_dir, 'data_bids_noIntendedFor')
-deriv_dir = os.path.join(bidsroot, 'derivatives')
-nilearn_dir = os.path.join(deriv_dir, 'nilearn')
+nilearn_dir = os.path.join(bidsroot, 'derivatives', 'nilearn')
 
 def create_labels(stat_maps):
     import os
@@ -93,7 +99,6 @@ def fit_searchlight(region_mask, brain_mask, fmri_img, y, searchlight_radius=sea
 nilearn_sub_dir = os.path.join(bidsroot, 'derivatives', 'nilearn', 
                                'level-1_fwhm-%.02f'%fwhm, 
                                'sub-%s_space-%s'%(subject_id, space_label))
-print(nilearn_sub_dir)
 
 # run-specific stimulus beta maps
 stat_maps = sorted(glob(nilearn_sub_dir+'/trial_models'+'/run*/*di*nii.gz')) 
@@ -102,8 +107,7 @@ print('# of stat maps: ', len(stat_maps))
 f_affine = nib.load(stat_maps[0]).affine
 
 # read in the overall brain mask
-anat_dir = os.path.join('/bgfs/bchandrasekaran/krs228/data/FLT/',
-                        'derivatives/fmriprep_noSDC/sub-{}/anat'.format(subject_id))
+anat_dir = os.path.join(fmriprep_dir, 'sub-{}/anat'.format(subject_id))
 brainmask_fpath = os.path.join(anat_dir, 'sub-{}_space-{}_desc-brain_mask.nii.gz'.format(subject_id, space_label))
 
 # generate condition labels based on filenames
@@ -122,9 +126,11 @@ mask_fpath = os.path.join(masks_dir, 'sub-%s_space-%s_mask-%s.nii.gz'%(subject_i
 # run the searchlight
 print('running searchlight on {} with mask {} and labels {}'.format(subject_id, mask_descrip, cond_label))
 if cond_label == 'tone':
-    searchlight = fit_searchlight(mask_fpath, brainmask_fpath, stat_maps, conditions_tone, searchlight_radius)
+    searchlight = fit_searchlight(mask_fpath, brainmask_fpath, stat_maps, 
+                                  conditions_tone, searchlight_radius)
 elif cond_label == 'shuffled':
-    searchlight = fit_searchlight(mask_fpath, brainmask_fpath, stat_maps, conditions_shuffled, searghlight_radius)
+    searchlight = fit_searchlight(mask_fpath, brainmask_fpath, stat_maps, 
+                                  conditions_shuffled, searghlight_radius)
 
 # turn searchlight scores into a 3D brain image
 searchlight_img = new_img_like(stat_maps[0], searchlight.scores_, ) # affine=f_affine)

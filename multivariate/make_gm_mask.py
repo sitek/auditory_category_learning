@@ -1,9 +1,34 @@
 #!/bin/python
 
 import os
+import argparse
 import nibabel as nib
 
-fwhm_sub = 1.5
+parser = argparse.ArgumentParser(
+                description='Create subject-specific grey matter mask',
+                epilog=('Example: python make_gm_mask.py --sub=FLT02 '
+                        ' --space=MNI152NLin2009cAsym --fwhm=1.5 '
+                        ' --bidsroot=/PATH/TO/BIDS/DIR/ ' 
+                        ' --fmriprep_dir=/PATH/TO/FMRIPREP/DIR/'))
+
+parser.add_argument("--sub", help="participant id", 
+                    type=str)
+parser.add_argument("--space", help="space label", 
+                    type=str)
+parser.add_argument("--fwhm", help="spatial smoothing full-width half-max", 
+                    type=float)
+parser.add_argument("--bidsroot", 
+                    help="top-level directory of the BIDS dataset", 
+                    type=str)
+parser.add_argument("--fmriprep_dir", 
+                    help="directory of the fMRIprep preprocessed dataset", 
+                    type=str)
+
+subject_id = args.sub
+space_label=args.space
+fwhm = args.fwhm
+bidsroot = args.bidsroot
+fmriprep_dir = args.fmriprep_dir
 
 ''' define other inputs '''
 # overall directory
@@ -51,25 +76,21 @@ def generate_mask(subject_id, statmap_example_fpath, out_dir, space_label):
     
     return out_fpath
 
+''' run function '''
+nilearn_sub_dir = os.path.join(bidsroot, 'derivatives', 'nilearn', 
+                                           'level-1_fwhm-%.02f'%fwhm, 
+                                           'sub-%s_space-%s'%(subject_id, space_label))    
+statmap_example_fpath = z_maps = sorted(glob(nilearn_sub_dir+'/trial_models/run*/*di*beta.nii.gz'))[0]
 
-space_label == 'MNI152NLin2009cAsym'
-for mx, sub_id in enumerate(sub_list):
-    print(sub_id)
-    
-    nilearn_sub_dir = os.path.join(bidsroot, 'derivatives', 'nilearn', 
-                                               'level-1_fwhm-%.02f'%fwhm_sub, 
-                                               'sub-%s_space-%s'%(sub_id, space_label))    
-    statmap_example_fpath = z_maps = sorted(glob(nilearn_sub_dir+'/trial_models/run*/*di*beta.nii.gz'))[0]
 
-    
-    atlas_fpath = os.path.join('/bgfs/bchandrasekaran/krs228/data/',
-                               'reference/', #tpl-MNI152NLin2009cAsym/',
-                               'tpl-MNI152NLin2009cAsym_res-01_desc-carpet_dseg.nii.gz')  
-    sub_mask_dir = os.path.join(nilearn_dir, 'masks', 'sub-%s'%sub_id, 
-                                'space-%s'%space_label, 'masks-dseg')   
+atlas_fpath = os.path.join('/bgfs/bchandrasekaran/krs228/data/',
+                           'reference/', #tpl-MNI152NLin2009cAsym/',
+                           'tpl-MNI152NLin2009cAsym_res-01_desc-carpet_dseg.nii.gz')  
+sub_mask_dir = os.path.join(nilearn_dir, 'masks', 'sub-%s'%subject_id, 
+                            'space-%s'%space_label, 'masks-dseg')   
 
-    if not os.path.exists(sub_mask_dir):
-        os.makedirs(sub_mask_dir)
-    
-    mask_fpath = generate_mask(sub_id, statmap_example_fpath, sub_mask_dir, space_label)
+if not os.path.exists(sub_mask_dir):
+    os.makedirs(sub_mask_dir)
+
+mask_fpath = generate_mask(subject_id, statmap_example_fpath, sub_mask_dir, space_label)
 

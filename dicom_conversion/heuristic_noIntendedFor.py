@@ -28,15 +28,9 @@ def infotodict(seqinfo):
     task_stgrid = create_key('sub-{subject}/func/sub-{subject}_task-stgrid_run-{item:02d}_bold')
     task_stgrid_sbref = create_key('sub-{subject}/func/sub-{subject}_task-stgrid_run-{item:02d}_sbref')
 
-    # fieldmap paths done in BIDS format
-    fieldmap_se_ap = create_key('sub-{subject}/fmap/sub-{subject}_dir-AP_run-{item:02d}_epi')
-    fieldmap_se_pa = create_key('sub-{subject}/fmap/sub-{subject}_dir-PA_run-{item:02d}_epi')
-    
     # create `info` dict
     info = {mp2rage_t1map:[], mp2rage_uniT1:[], 
-            #mp2rage_uniT1den:[], 
             t1w:[],
-            fieldmap_se_ap:[], fieldmap_se_pa:[],
             task_tonecat:[], task_tonecat_sbref:[],
             task_stgrid:[], task_stgrid_sbref:[]}
     

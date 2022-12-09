@@ -31,14 +31,6 @@ bidsroot = args.bidsroot
 fmriprep_dir = args.fmriprep_dir
 
 ''' define other inputs '''
-# overall directory
-project_dir = os.path.join('/bgfs/bchandrasekaran/krs228/data/', 'FLT/')
-
-# fmriprep directory (for anat/masks)
-fmriprep_dir = os.path.join(project_dir, 'derivatives', 'fmriprep_noSDC')
-
-# nilearn derivative directory (is inside BIDS directory, unlike fmriprep dir)
-bidsroot = os.path.join(project_dir, 'data_bids_noIntendedFor')
 deriv_dir = os.path.join(bidsroot, 'derivatives')
 nilearn_dir = os.path.join(deriv_dir, 'nilearn')
 
@@ -82,10 +74,6 @@ nilearn_sub_dir = os.path.join(bidsroot, 'derivatives', 'nilearn',
                                            'sub-%s_space-%s'%(subject_id, space_label))    
 statmap_example_fpath = z_maps = sorted(glob(nilearn_sub_dir+'/trial_models/run*/*di*beta.nii.gz'))[0]
 
-
-atlas_fpath = os.path.join('/bgfs/bchandrasekaran/krs228/data/',
-                           'reference/', #tpl-MNI152NLin2009cAsym/',
-                           'tpl-MNI152NLin2009cAsym_res-01_desc-carpet_dseg.nii.gz')  
 sub_mask_dir = os.path.join(nilearn_dir, 'masks', 'sub-%s'%subject_id, 
                             'space-%s'%space_label, 'masks-dseg')   
 

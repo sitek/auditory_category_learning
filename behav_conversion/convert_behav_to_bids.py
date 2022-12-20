@@ -122,9 +122,9 @@ if 'ToneLearning' in task_id:
 
                 # save to output path
                 out_fpath = os.path.join(project_dir,
-                                         'data_bids',
+                                         'data_bids_noIntendedFor',
                                          'sub-%s'%subject_id, 'func',
-                                         'sub-%s_task-%s_run-%02d_events.tsv'%(subject_id, bids_task_list[0], run_i = 1))
+                                         'sub-%s_task-%s_run-%02d_events.tsv'%(subject_id, bids_task_list[0], run_i))
 
                 bids_df.to_csv(out_fpath, sep='\t')
                 print('saved output to ', out_fpath)
@@ -135,7 +135,7 @@ if 'ToneLearning' in task_id:
 
 
 ''' Spectrotemporal grid stimulus task '''
-elif 'STgrid' in task_id:
+if 'STgrid' in task_id:
     stim_delay = 0.4
 
     # define the time before the first stimulus starts

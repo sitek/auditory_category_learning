@@ -64,22 +64,6 @@ t_r = args.t_r
 bidsroot = args.bidsroot
 fmriprep_dir = args.fmriprep_dir
 
-
-''' import data with `pybids` '''
-# based on: https://github.com/bids-standard/pybids/blob/master/examples/pybids_tutorial.ipynb
-def import_bids_data(bidsroot, subject_id, task_label):
-    from bids import BIDSLayout
-
-    layout = BIDSLayout(bidsroot)
-
-    all_files = layout.get()
-    t1w_fpath = layout.get(return_type='filename', subject=subject_id, 
-                            suffix='T1w', extension='nii.gz')[0]
-    bold_files = layout.get(return_type='filename', subject=subject_id, 
-                            suffix='bold', task=task_label, extension='nii.gz')
-    return all_files, t1w_fpath, bold_files
-
-
 ''' nilearn modeling: first level '''
 def prep_models_and_args(subject_id=None, task_label=None, fwhm=None, bidsroot=None, 
                          deriv_dir=None, event_type=None, t_r=None, t_acq=None, space_label='T1w'):

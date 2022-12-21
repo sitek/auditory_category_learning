@@ -1,9 +1,12 @@
 #!/bin/bash
 
-#SBATCH --time=6:00:00
+#SBATCH --time=12:00:00
 #SBATCH -c 2
 
 #conda activate py3
 
 python modeling_firstlevel_singleevent.py --sub=$1 --task=tonecat \
-    --space=T1w --fwhm=1.5 --event_type=stimulus --t_acq=2 --t_r=3
+    --space=MNI152NLin2009cAsym --fwhm=0 \
+    --event_type=stimulus --t_acq=2 --t_r=3 \
+    --bidsroot=/bgfs/bchandrasekaran/krs228/data/FLT/data_bids_noIntendedFor/ \
+    --fmriprep_dir=/bgfs/bchandrasekaran/krs228/data/FLT/derivatives/fmriprep_noSDC/

@@ -2,6 +2,7 @@
 
 import os
 import argparse
+from glob import glob
 import nibabel as nib
 
 parser = argparse.ArgumentParser(
@@ -23,6 +24,8 @@ parser.add_argument("--bidsroot",
 parser.add_argument("--fmriprep_dir", 
                     help="directory of the fMRIprep preprocessed dataset", 
                     type=str)
+
+args = parser.parse_args()
 
 subject_id = args.sub
 space_label=args.space
@@ -73,7 +76,7 @@ def generate_mask(subject_id, statmap_example_fpath, out_dir, space_label):
 nilearn_sub_dir = os.path.join(bidsroot, 'derivatives', 'nilearn', 
                                            'level-1_fwhm-%.02f'%fwhm, 
                                            'sub-%s_space-%s'%(subject_id, space_label))    
-statmap_example_fpath = z_maps = sorted(glob(nilearn_sub_dir+'/trial_models/run*/*di*beta.nii.gz'))[0]
+statmap_example_fpath = sorted(glob(nilearn_sub_dir+'/*/run*/*di*beta.nii.gz'))[0]
 
 sub_mask_dir = os.path.join(nilearn_dir, 'masks', 'sub-%s'%subject_id, 
                             'space-%s'%space_label, 'masks-dseg')   

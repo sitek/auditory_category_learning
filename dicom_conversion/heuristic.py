@@ -1,9 +1,9 @@
 import os
 
 POPULATE_INTENDED_FOR_OPTS = {
-        'matching_parameters': ['ImagingVolume', 'Shims'],
+        'matching_parameters': ['ImagingVolume', 'Shims', 'ModalityAcquisitionLabel'],
         'criterion': 'Closest'
-}
+         } 
 
 def create_key(template, outtype=('nii.gz',), annotation_classes=None):
     if template is None or not template:
@@ -40,18 +40,19 @@ def infotodict(seqinfo):
     task_stgrid_sbref = create_key('sub-{subject}/func/sub-{subject}_task-stgrid_run-{item:02d}_sbref')
 
     # fieldmap paths done in BIDS format
-    fieldmap_se_ap = create_key('sub-{subject}/fmap/sub-{subject}_dir-AP_run-{item:02d}_epi')
-    fieldmap_se_pa = create_key('sub-{subject}/fmap/sub-{subject}_dir-PA_run-{item:02d}_epi')
+    fieldmap_se_ap = create_key('sub-{subject}/fmap/sub-{subject}_acq-func_dir-AP_run-{item:02d}_epi')
+    fieldmap_se_pa = create_key('sub-{subject}/fmap/sub-{subject}_acq-func_dir-PA_run-{item:02d}_epi')
     
     # SWI paths
-    swi_mag = create_key('sub-{subject}/anat/sub-{subject}_part-magnitude_swi')
-    swi_ph = create_key('sub-{subject}/anat/sub-{subject}_part-phase_swi')
-    swi_mip = create_key('sub-{subject}/anat/sub-{subject}_rec-mIP_swi')
-    swi = create_key('sub-{subject}/anat/sub-{subject}_swi')
+    swi_mag = create_key('sub-{subject}/swi/sub-{subject}_part-mag_swi')
+    swi_ph = create_key('sub-{subject}/swi/sub-{subject}_part-phase_swi')
+    swi_mip = create_key('sub-{subject}/swi/sub-{subject}_rec-mIP_swi')
+    swi = create_key('sub-{subject}/swi/sub-{subject}_swi')
     
     # create `info` dict
-    info = {mp2rage_inv1mag:[], mp2rage_inv1ph:[], 
-            mp2rage_inv2mag:[], mp2rage_inv2ph:[], 
+    info = {
+            #mp2rage_inv1mag:[], mp2rage_inv1ph:[], 
+            #mp2rage_inv2mag:[], mp2rage_inv2ph:[], 
             mp2rage_t1map:[], mp2rage_uniT1:[], 
             #mp2rage_uniT1den:[], 
             #mp2rage_div:[], mp2rage_head:[], 
@@ -64,6 +65,7 @@ def infotodict(seqinfo):
     for s in seqinfo:
         # MP2RAGE anatomy run
         if ('MP2RAGE' in s.series_id):
+            '''
             if ('INV1_PHS' in s.series_description):
                 info[mp2rage_inv1ph] = [s.series_id]
             elif ('INV1' in s.series_description):
@@ -72,8 +74,8 @@ def infotodict(seqinfo):
                 info[mp2rage_inv2ph] = [s.series_id]
             elif ('INV2' in s.series_description):
                 info[mp2rage_inv2mag] = [s.series_id]
-            
-            elif ('UNI-DEN' in s.series_description):
+            '''
+            if ('UNI-DEN' in s.series_description):
                 #info[mp2rage_uniT1den] = [s.series_id]
                 info[t1w] = [s.series_id]
             elif ('UNI_Images' in s.series_description):
@@ -99,6 +101,7 @@ def infotodict(seqinfo):
                         if ('M' in s.image_type):
                             info[fieldmap_se_ap].append(s.series_id)
                 elif ('SBRef' in s.series_description):
+                    if ~('FieldMap SE' in s.series_description):
                         info[task_tonecat_sbref].append(s.series_id)
                 elif (s.dim4 > 100): # a full run should have over 100 volumes
                         info[task_tonecat].append(s.series_id)
@@ -114,24 +117,25 @@ def infotodict(seqinfo):
                         if ('M' in s.image_type):
                             info[fieldmap_se_ap].append(s.series_id)
                 elif ('SBRef' in s.series_description):
+                    if ~('FieldMap SE' in s.series_description):
                         info[task_stgrid_sbref].append(s.series_id)
                 elif (s.dim4 > 100): # a full run should have over 100 volumes
                         info[task_stgrid].append(s.series_id)
 
-        '''
         # SWI (not yet in official BIDS standard)
         if ('SWI' in s.protocol_name):
+            continue
             # commenting out for now due to heudiconv set issue
             # on multi-echo images - 
             # should be fixed by nipy/heudiconv #461
-            if ('Mag' in s.series_description):
-                info[swi_mag].append(s.series_id)
-            if ('Pha' in s.series_description):
-                info[swi_ph].append(s.series_id)
-            if ('mIP' in s.series_description):
-                info[swi_mip].append(s.series_id)
-            if ('SWI' in s.series_description):
-                info[swi].append(s.series_id)
-        '''    
+            #if ('Mag' in s.series_description):
+            #    info[swi_mag].append(s.series_id)
+            #if ('Pha' in s.series_description):
+            #    info[swi_ph].append(s.series_id)
+            #if ('mIP' in s.series_description):
+            #    info[swi_mip].append(s.series_id)
+            #if ('SWI' in s.series_description):
+            #    info[swi].append(s.series_id)
+            
     return info
 

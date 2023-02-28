@@ -68,13 +68,9 @@ fmriprep_dir = args.fmriprep_dir
 # based on: https://nilearn.github.io/auto_examples/04_glm_first_level/plot_bids_features.html
 # #sphx-glr-auto-examples-04-glm-first-level-plot-bids-features-py
 
-def prep_models_and_args(subject_id=None, task_id=None, fwhm=None, bidsroot=None, 
-                         deriv_dir=None, event_type=None, t_r=None, t_acq=None, space_label='T1w'):
+def prep_models_and_args(subject_id=None, task_label=None, fwhm=None, bidsroot=None, 
+                         deriv_dir=None, event_type=None, t_r=None, t_acq=None, space_label='MNI152NLin2009cAsym'):
     from nilearn.glm.first_level import first_level_from_bids
-    data_dir = bidsroot
-
-    task_label = task_id
-    fwhm_sub = fwhm
 
     # correct the fmriprep-given slice reference (middle slice, or 0.5)
     # to account for sparse acquisition (silent gap during auditory presentation paradigm)
@@ -85,7 +81,7 @@ def prep_models_and_args(subject_id=None, task_id=None, fwhm=None, bidsroot=None
 
     print(data_dir, task_label, space_label)
 
-    models, models_run_imgs, models_events, models_confounds = first_level_from_bids(data_dir, task_label, space_label,
+    models, models_run_imgs, models_events, models_confounds = first_level_from_bids(bidsroot, task_label, space_label,
                                                                                      [subject_id],
                                                                                      smoothing_fwhm=fwhm,
                                                                                      derivatives_folder=deriv_dir,

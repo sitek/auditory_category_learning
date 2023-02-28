@@ -68,7 +68,6 @@ fmriprep_dir = args.fmriprep_dir
 def prep_models_and_args(subject_id=None, task_label=None, fwhm=None, bidsroot=None, 
                          deriv_dir=None, event_type=None, t_r=None, t_acq=None, space_label='T1w'):
     from nilearn.glm.first_level import first_level_from_bids
-    data_dir = bidsroot
 
     task_label = task_label
     fwhm_sub = fwhm
@@ -80,9 +79,9 @@ def prep_models_and_args(subject_id=None, task_label=None, fwhm=None, bidsroot=N
     # we need to account for this
     slice_time_ref = 0.5 * t_acq / t_r
 
-    print(data_dir, task_label, space_label)
+    print(bidsroot, task_label, space_label)
 
-    models, models_run_imgs, models_events, models_confounds = first_level_from_bids(data_dir, task_label, space_label,
+    models, models_run_imgs, models_events, models_confounds = first_level_from_bids(bidsroot, task_label, space_label,
                                                                                      [subject_id],
                                                                                      smoothing_fwhm=fwhm,
                                                                                      derivatives_folder=deriv_dir,

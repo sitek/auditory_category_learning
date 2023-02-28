@@ -21,6 +21,7 @@ heudiconv -d "${data_dir}/sourcedata/dicoms/{subject}/*/scans/*/resources/DICOM/
   -s $sub \
   -c dcm2niix \
   --bids \
+  --grouping all \
   -ss 1 \
-  -o $data_dir/data_bids_noIntendedFor \
-  -f heuristic_noIntendedFor.py
+  -o $data_dir/data_bids \
+  -f heuristic.py

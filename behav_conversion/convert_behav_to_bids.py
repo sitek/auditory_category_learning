@@ -122,7 +122,7 @@ if 'ToneLearning' in task_id:
 
                 # save to output path
                 out_fpath = os.path.join(project_dir,
-                                         'data_bids_noIntendedFor',
+                                         'data_bids',
                                          'sub-%s'%subject_id, 'func',
                                          'sub-%s_task-%s_run-%02d_events.tsv'%(subject_id, bids_task_list[0], run_i))
 
@@ -150,7 +150,7 @@ if 'STgrid' in task_id:
             print('too few trials. skipping')
         else:
             # define output path
-            out_fpath = os.path.join(project_dir, 'data_bids_noIntendedFor', 
+            out_fpath = os.path.join(project_dir, 'data_bids', 
                                      'sub-%s'%subject_id, 'func',
                                      'sub-%s_task-%s_run-%02d_events.tsv'%(subject_id, bids_task_list[1], rx+1))
 

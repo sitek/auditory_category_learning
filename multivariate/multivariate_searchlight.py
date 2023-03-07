@@ -72,7 +72,7 @@ def create_labels(stat_maps):
     # shuffled conditions
     conditions_shuffled = copy(conditions_tone)
     shuffle(conditions_shuffled)
-    print('tone conditions: ', np.unique(conditions_shuffled))
+    print('shuffled conditions: ', np.unique(conditions_shuffled))
 
     return conditions_tone, conditions_talker, conditions_all, conditions_shuffled
 
@@ -131,7 +131,7 @@ if cond_label == 'tone':
                                   conditions_tone, searchlight_radius)
 elif cond_label == 'shuffled':
     searchlight = fit_searchlight(mask_fpath, brainmask_fpath, stat_maps, 
-                                  conditions_shuffled, searghlight_radius)
+                                  conditions_shuffled, searchlight_radius)
 
 # turn searchlight scores into a 3D brain image
 searchlight_img = new_img_like(stat_maps[0], searchlight.scores_, ) # affine=f_affine)

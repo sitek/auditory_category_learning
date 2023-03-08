@@ -79,7 +79,7 @@ def prep_models_and_args(subject_id=None, task_label=None, fwhm=None, bidsroot=N
     # we need to account for this
     slice_time_ref = 0.5 * t_acq / t_r
 
-    print(data_dir, task_label, space_label)
+    print(bidsroot, task_label, space_label)
 
     models, models_run_imgs, models_events, models_confounds = first_level_from_bids(bidsroot, task_label, space_label,
                                                                                      [subject_id],

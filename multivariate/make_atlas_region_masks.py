@@ -1,8 +1,12 @@
 #!/bin/python
 
 import os
+import sys
+import json
 import argparse
+import numpy as np
 import nibabel as nib
+from glob import glob
 
 parser = argparse.ArgumentParser(
                 description='Create subject-specific grey matter mask',
@@ -28,8 +32,14 @@ parser.add_argument("--bidsroot",
 parser.add_argument("--fmriprep_dir", 
                     help="directory of the fMRIprep preprocessed dataset", 
                     type=str)
+args = parser.parse_args()
 
-subject_id = args.sub
+if len(sys.argv) < 2:
+    parser.print_help()
+    print(' ')
+    sys.exit(1)
+    
+sub_id = args.sub
 space_label=args.space
 fwhm = args.fwhm
 atlas_label = args.atlas_label
@@ -44,9 +54,11 @@ nilearn_dir = os.path.join(deriv_dir, 'nilearn')
 roi_dict_MNI_dseg = {'L-Caud': 35, 'L-Put': 36, 'L-HG': 189, 'L-PP': 187, 
                      'L-PT': 191, 'L-STGa': 117, 'L-STGp': 119, 
                      'L-ParsOp': 111, 'L-ParsTri': 109, 
+                     'L-Lat-Ventricle': 3, 'L-Supracalcarine': 193,
                      'R-Caud': 46, 'R-Put': 47, 'R-HG': 190, 'R-PP': 188, 
                      'R-PT': 192, 'R-STGa': 118, 'R-STGp': 120, 
-                     'R-ParsOp': 112, 'R-ParsTri': 110, }
+                     'R-ParsOp': 112, 'R-ParsTri': 110, 
+                     'R-Lat-Ventricle': 4, 'R-Supracalcarine': 194,}
 roi_dict_T1w_aseg = {'L-VentralDC': 28, 'L-Caud': 11, 'L-Put': 12, 
                      'L-HG': 1034, 'L-STG': 1030, 'L-ParsOp': 1018, 
                      'L-ParsTri': 1020, 'L-SFG': 1028, 'Brainstem': 16, 
@@ -78,10 +90,10 @@ def generate_mask(sub_id, zmap_example_fpath, atlas_fpath, labelnum, labelname, 
 
 ''' create atlas region masks '''
 nilearn_sub_dir = os.path.join(bidsroot, 'derivatives', 'nilearn', 
-                                           'level-1_fwhm-%.02f'%fwhm_sub, 
+                                           'level-1_fwhm-%.02f'%fwhm, 
                                            'sub-%s_space-%s'%(sub_id, space_label))    
 print(nilearn_sub_dir)
-zmap_example_fpath = z_maps = sorted(glob(nilearn_sub_dir+'/trial_models/run*/*di*beta.nii.gz'))[0]
+zmap_example_fpath = z_maps = sorted(glob(nilearn_sub_dir+'/stimulus_per_run/run*/*di*beta.nii.gz'))[0]
 
 if space_label == 'T1w' and atlas_label == 'aparc': 
     atlas_fpath = os.path.join(fmriprep_dir, 'sub-%s'%sub_id, 'anat',

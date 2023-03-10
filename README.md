@@ -16,7 +16,7 @@ Processing and analyzing tone-learning fMRI data. WIP - KRS 2022.10
 
 **Univariate analysis: `./univariate/`**
 1. Run `univariate_analysis.py`
-2. (Not yet implemented) Group-level univariate statistics
+2. Run `group_level.ipynb` for group-level GLM and output maps/figures
 
 **Multivariate analysis: `./multivariate/`**
 1. Create trial-specific beta estimates with `modeling_firstlevel_singleevent.py` 
@@ -29,4 +29,7 @@ Processing and analyzing tone-learning fMRI data. WIP - KRS 2022.10
 2. Create grey matter mask for searchlight using `make_gm_mask.py` (WIP)
 3. Run whole-brain searchlight with `multivariate_searchlight.py`
 4. Run region-based decoding with `confusion_matrix_plots.py`
-5. (Not yet implemented) Group-level searchlight decoder statistics
+5. (Work-in-progress) Group-level searchlight decoder statistics with `group_level_searchlight_WIP.ipynb`
+
+**Representational similarity analysis: `./rsa/`**
+*Work in progress*

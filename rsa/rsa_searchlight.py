@@ -2,12 +2,9 @@
 # coding: utf-8
 
 # Based on the rsatoolbox tutorial: https://rsatoolbox.readthedocs.io/en/stable/demo_searchlight.html
-
-# In[1]:
-
-
 import os
 import argparse
+import sys
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -37,7 +34,7 @@ parser.add_argument("--sub", help="participant id",
 parser.add_argument("--space", help="space label", 
                     type=str)
 parser.add_argument("--fwhm", help="spatial smoothing full-width half-max", 
-                    type=float)
+                    type=str)
 parser.add_argument("--bidsroot", 
                     help="top-level directory of the BIDS dataset", 
                     type=str)
@@ -56,6 +53,7 @@ space_label=args.space
 fwhm = args.fwhm
 bidsroot = args.bidsroot
 fmriprep_dir = args.fmriprep_dir
+print(sub_id, space_label, fwhm)
 
 ''' Helper functions '''
 def upper_tri(RDM):
@@ -198,6 +196,7 @@ data_folder = os.path.join(model_dir,
                            'run-all')
 print(data_folder)
 image_paths = sorted(glob('{}/*contrast-sound*map-tstat.nii.gz'.format(data_folder)))
+assert len(image_paths)
 
 mask_fpath = os.path.join(deriv_dir, 'nilearn', 'masks', 'sub-{}'.format(sub_id),
                           'space-{}'.format(space_label), 'masks-dseg',
@@ -242,7 +241,7 @@ for mi, cat_model in enumerate(cat_models):
     # get the evaulation score for each voxel
     # We only have one model, but evaluations returns a list. 
     # By using float we just grab the value within that list
-    eval_score = [np.float(e.evaluations) for e in eval_results]
+    eval_score = [float(e.evaluations) for e in eval_results]
 
 
     # Create an 3D array, with the size of mask, and

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --time=18:00:00
+#SBATCH --time=22:00:00
 
 #conda activate py3
 

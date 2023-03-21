@@ -225,6 +225,7 @@ def nilearn_glm_per_run(stim_list, task_label, event_filter, models, models_run_
                         nib.save(tmap, tmap_fpath)
                         print('saved t map to ', tmap_fpath)
 
+                        '''
                         # save residuals
                         resid_fpath = os.path.join(nilearn_sub_run_dir,
                                                 analysis_prefix+'_map-residuals.nii.gz')
@@ -232,7 +233,17 @@ def nilearn_glm_per_run(stim_list, task_label, event_filter, models, models_run_
                         print('saved residuals map to ', resid_fpath)
                         
                         stim_contrast_list.append(contrast_label)
-
+                        '''
+                        
+                        # save report
+                        print('saving report')
+                        report_fpath = os.path.join(nilearn_sub_run_dir,
+                                                    analysis_prefix+'_report.html')
+                        report = make_glm_report(model=model,
+                                                contrasts=contrast_label)
+                        report.save_as_html(report_fpath)
+                        print('saved report to ', report_fpath)
+                
                     except:
                         print('could not run for ', img, ' with ', contrast_label)
           

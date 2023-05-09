@@ -208,6 +208,12 @@ def nilearn_glm_per_run(stim_list, task_label, \
                     nib.save(statmap, statmap_fpath)
                     print('saved beta map to ', statmap_fpath)
 
+                    # save t map
+                    tmap_fpath = os.path.join(nilearn_sub_run_dir,
+                                            analysis_prefix+'_map-tstat.nii.gz')
+                    nib.save(tmap, tmap_fpath)
+                    print('saved t map to ', tmap_fpath)
+
                     '''
                     # save residuals
                     resid_fpath = os.path.join(nilearn_sub_run_dir,

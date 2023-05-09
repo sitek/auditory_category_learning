@@ -38,12 +38,12 @@ deriv_dir = os.path.join(bidsroot, 'derivatives')
 nilearn_dir = os.path.join(deriv_dir, 'nilearn')
 
 # masking function
-def generate_mask(subject_id, statmap_example_fpath, out_dir, space_label):
+def generate_mask(subject_id, fmriprep_dir, statmap_example_fpath, out_dir, space_label):
     from nilearn.image import resample_to_img
     
     # read in the overall brain mask
-    anat_dir = os.path.join('/bgfs/bchandrasekaran/krs228/data/FLT/',
-                            'derivatives/fmriprep_noSDC/sub-{}/anat'.format(subject_id))
+    anat_dir = os.path.join(fmriprep_dir,
+                            'sub-{}/anat'.format(subject_id))
 
     # create binarized gray matter mask
     gm_fpath = os.path.join(anat_dir, 'sub-{}_space-{}_label-GM_probseg.nii.gz'.format(subject_id, space_label))
@@ -52,17 +52,6 @@ def generate_mask(subject_id, statmap_example_fpath, out_dir, space_label):
     from nilearn.image import binarize_img
     #gm_bin_img = binarize_img(gm_img, threshold=0.9)
     gm_bin_img = binarize_img(gm_img, threshold=0)
-    
-    '''
-    atlas_img = nib.load(atlas_fpath)
-    atlas_data = atlas_img.get_fdata()
-    atlas_affine = atlas_img.affine
-    
-    mask_data = np.zeros((atlas_data.shape))
-    mask_data[np.where(atlas_data == labelnum)] = 1
-
-    mask_img = nib.Nifti1Image(mask_data, atlas_affine)
-    '''
 
     mask_func_img = resample_to_img(gm_bin_img, statmap_example_fpath, interpolation='nearest')
     
@@ -84,5 +73,5 @@ sub_mask_dir = os.path.join(nilearn_dir, 'masks', 'sub-%s'%subject_id,
 if not os.path.exists(sub_mask_dir):
     os.makedirs(sub_mask_dir)
 
-mask_fpath = generate_mask(subject_id, statmap_example_fpath, sub_mask_dir, space_label)
+mask_fpath = generate_mask(subject_id, fmriprep_dir, statmap_example_fpath, sub_mask_dir, space_label)
 

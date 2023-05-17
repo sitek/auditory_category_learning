@@ -136,6 +136,9 @@ if 'ToneLearning' in task_id:
 
 ''' Spectrotemporal grid stimulus task '''
 if 'STgrid' in task_id:
+
+    # define initial BOLD acquisition time before task begins during silent gap
+    first_acq = 2
     stim_delay = 0.4
 
     # define the time before the first stimulus starts
@@ -146,44 +149,49 @@ if 'STgrid' in task_id:
         fpath = os.path.join(behav_dir, filename)
         df = pd.read_csv(fpath)
 
-        if len(df) < 30:
+        if len(df) < 100:
             print('too few trials. skipping')
         else:
             # define output path
-            out_fpath = os.path.join(project_dir, 'data_bids', 
+            out_fpath = os.path.join(bids_dir, 
                                      'sub-%s'%subject_id, 'func',
-                                     'sub-%s_task-%s_run-%02d_events.tsv'%(subject_id, bids_task_list[1], rx+1))
+                                     'sub-%s_task-%s_run-%02d_events.tsv'%(subject_id, 
+                                                                           bids_task_list[1], 
+                                                                           rx+1))
 
             # set up dataframe
-            bids_df = pd.DataFrame(columns=['onset', 'duration', 'trial_type',
-                                            'response_time', 'stim_file'])
+            bids_df = pd.DataFrame(columns=['onset', 'duration', 'trial_type', 
+                                            'temp_mod_rate', 'spect_mod_rate',
+                                            'response_time'])
 
-            bids_df.onset = df['sound_stimulus.started']-(df['sound_stimulus.started'][1]-first_stim_delay)
-            bids_df.duration[df['sound_stimulus.started']>0] = 1.0
+            #bids_df.onset = df['sound_stimulus.started']-(df['sound_stimulus.started'][1]-first_stim_delay)
+            #bids_df.duration[df['sound_stimulus.started']>0] = 1.0
 
-            #bids_df.trial_type[df['sound_stimulus.started'] > 0]   = 'sound'
-            #bids_df.trial_type[df.soundFile == 'stimuli/null.wav'] = 'silent'
+            onset_list = []
+            stim_list = []
+            temp_list = []
+            spect_list = []
             for sx, stim in enumerate(df.soundFile):
-                if isinstance(stim, str):
-                    if 'S15' in stim:
-                        bids_df.trial_type[sx] = '_'.join(stim.split('_')[2:4]) 
-                    elif 'null' in stim:
-                        bids_df.trial_type[sx] = 'null'
+                if isinstance(stim, str) and 'S15' in stim:
+                    if stim != df.soundFile[sx-1]:
+                        stim_num = int(stim.split('_')[3])
+                        temp_mod = mod_df.loc[stim_num]['temp_mod_rate']
+                        spect_mod = mod_df.loc[stim_num]['spect_mod_rate']
 
-            # define response time (minus stim delay)
-            bids_df.response_time = df['key_resp.rt'] - stim_delay
+                        onset = (df['sound_stimulus.started'][sx]-
+                                 (df['sound_stimulus.started'][1]-first_stim_delay))
+                        onset_list.append(onset)
 
-            bids_df.stim_file = df.soundFile
+                        stim_list.append('stim%02d'%stim_num)
+                        temp_list.append(temp_mod)
+                        spect_list.append(spect_mod)
 
-            # drop the first row if it's not a stimulus
-            try:
-                # is an error if index has been removed
-                pd.isna(bids_df.stim_file[0]) 
-                bids_df.drop(axis=0, index=0, inplace=True)
-            except:
-                pass
-
-            bids_df.head()
+            bids_df.onset = onset_list        
+            bids_df.trial_type = stim_list
+            bids_df.temp_mod_rate = temp_list
+            bids_df.spect_mod_rate = spect_list
+            bids_df.duration = 20 
+            print(bids_df)
 
             # save to output path
             bids_df.to_csv(out_fpath, sep='\t')

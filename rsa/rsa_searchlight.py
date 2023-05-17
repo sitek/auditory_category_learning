@@ -221,7 +221,7 @@ ffr_rdm = RDMs(ffr_rdm_data[np.newaxis,:,:],
                rdm_descriptors={'FFR model': rdm_name},
                pattern_descriptors=pattern_descriptors,
                dissimilarity_measure='Euclidean')
-ffr_model = ModelFixed('FFR model', ffr_rdm)
+ffr_model = ModelFixed('FFR_participant model', ffr_rdm)
 
 ffr_models = [ffr_model]
     

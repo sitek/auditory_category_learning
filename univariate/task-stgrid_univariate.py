@@ -32,6 +32,9 @@ parser.add_argument("--fwhm",
 parser.add_argument("--event_type", 
                     help="what to model (options: `stimulus` or `feedback`)", 
                     type=str)
+parser.add_argument("--model_type", 
+                    help="trial model scheme (options: `LSA` or `LSS`)", 
+                    type=str)
 parser.add_argument("--t_acq", 
                     help=("BOLD acquisition time (if different from "
                           "repetition time [TR], as in sparse designs)"), 
@@ -58,6 +61,7 @@ task_label = args.task
 space_label=args.space
 fwhm = args.fwhm
 event_type=args.event_type
+model_type=args.model_type
 t_acq = args.t_acq
 t_r = args.t_r
 bidsroot = args.bidsroot
@@ -129,10 +133,19 @@ def prep_models_and_args(subject_id=None, task_id=None, fwhm=None, bidsroot=None
     #model_and_args = zip(models, models_run_imgs, models_events, models_confounds)
     return stim_list, models, models_run_imgs, models_events, models_confounds, conf_keep_list
 
+# transform full event design matrix (LSA) into single-event only (LSS)
+def lss_transformer(event_df, event_name):
+    other_idx = np.array(event_df.loc[:,'trial_type'] != event_name)
+    lss_event_df = event_df.copy()
+    lss_event_df.loc[other_idx, 'trial_type'] = 'other_events' 
+    return lss_event_df
+
 
 # ### Across-runs GLM
-def nilearn_glm_across_runs(stim_list, task_label, models, models_run_imgs, \
-                            models_events, models_confounds, conf_keep_list, space_label):
+def nilearn_glm_across_runs(stim_list, task_label, model_type, \
+                            models, models_run_imgs, \
+                            models_events, models_confounds, \
+                            conf_keep_list, space_label):
     from nilearn.reporting import make_glm_report
     for midx in range(len(models)):
         for sx, stim in enumerate(stim_list):
@@ -143,9 +156,13 @@ def nilearn_glm_across_runs(stim_list, task_label, models, models_run_imgs, \
             midx = 0
             model = models[midx]
             imgs = models_run_imgs[midx]
-            events = models_events[midx]
+            #events = models_events[midx]
             confounds = models_confounds[midx]
-
+            if model_type = 'LSA':
+                events = models_events[midx]
+            elif model_type == 'LSS':
+                events = [lss_transformer(models_events[midx][rx], stim) for rx in range(len(imgs))]
+            
             print(model.subject_label)
 
             # set limited confounds
@@ -213,13 +230,15 @@ if not os.path.exists(nilearn_dir):
 event_type = 'block_stim'
 
 stim_list, models, models_run_imgs, \
-    models_events, models_confounds, conf_keep_list = prep_models_and_args(subject_id, task_label, 
-                                                                             fwhm, bidsroot, 
-                                                                             fmriprep_dir, event_type,
-                                                                             t_r, t_acq, 
-                                                                             space_label)
+    models_events, models_confounds, \
+    conf_keep_list = prep_models_and_args(subject_id, task_label, 
+                                          fwhm, bidsroot, 
+                                          fmriprep_dir, event_type,
+                                          t_r, t_acq, 
+                                          space_label)
 # Across-run GLM
-zmap_fpath, statmap_fpath, contrast_label = nilearn_glm_across_runs(stim_list, task_label, 
-                                                                    models, models_run_imgs, 
-                                                                    models_events, models_confounds, 
-                                                                    conf_keep_list, space_label)
+zmap_fpath, statmap_fpath, \
+    contrast_label = nilearn_glm_across_runs(stim_list, task_label, model_type,
+                                             models, models_run_imgs, 
+                                             models_events, models_confounds, 
+                                             conf_keep_list, space_label)

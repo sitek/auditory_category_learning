@@ -182,7 +182,7 @@ for dx, descrip in enumerate(model_rdms.rdm_descriptors['stimulus_model']):
     stim_models.append(spec_model)
 
 # ### FFR RDMs
-ffr_strategy = 'participant'
+ffr_strategy = 'group'
 if ffr_strategy == 'group':
     # start with grand average FFR
     print('loading FFR dissimilarity matrix')
@@ -318,7 +318,7 @@ if analysis_window == 'session':
     # define output path
     out_dir = os.path.join(model_dir, 
                            'sub-{}_space-{}'.format(sub_id, space_label),
-                           'rsa-searchlight_{}'.format(model_desc))
+                           'rsa-searchlight_fwhm-{}_searchvox-{}_{}'.format(fwhm, searchrad, model_desc))
     if not os.path.exists(out_dir):
             os.makedirs(out_dir)
 
@@ -330,8 +330,10 @@ if analysis_window == 'session':
         model_id = test_model.name.split(' ')[0]
 
         # #### Save correlation image
-        sub_outname = 'sub-{}_rsa-searchlight_model-{}.nii.gz'.format(sub_id, 
-                                                                      model_id)
+        sub_outname = 'sub-{}_fwhm-{}_searchvox-{}_rsa-searchlight_model-{}.nii.gz'.format(sub_id, 
+                                                                                           fwhm,
+                                                                                           searchrad,
+                                                                                           model_id)
         out_fpath = os.path.join(out_dir, sub_outname)
         nib.save(plot_img, out_fpath)
         print('saved image to ', out_fpath)
@@ -342,8 +344,9 @@ elif analysis_window == 'run':
     sub_model_folder = os.path.join(model_dir, 
                                'sub-{}_space-{}'.format(sub_id, space_label),
                                model_desc)
-    
+    print(sub_model_folder)
     run_labels = [os.path.basename(x) for x in sorted(glob(sub_model_folder+'/run*'))]
+    print(run_labels)
     
     for rx, run_label in enumerate(run_labels):
         # set this path to wherever you saved the folder containing the img-files
@@ -351,13 +354,15 @@ elif analysis_window == 'run':
         print('creating searchlight RDMs for ', run_label)
         image_paths = sorted(glob('{}/*contrast-sound*map-tstat.nii.gz'.format(data_folder)))
         assert len(image_paths)
+        print(image_paths)
 
         SL_RDM, data = get_searchlight_rdm(mask_data, image_paths, centers, neighbors)
 
         # define output path
         out_dir = os.path.join(model_dir, 
                                'sub-{}_space-{}'.format(sub_id, space_label),
-                               'rsa-searchlight_{}_{}'.format(run_label, model_desc))
+                               'rsa-searchlight_fwhm-{}_searchvox-{}_{}'.format(fwhm, searchrad, model_desc),
+                               run_label, )
         if not os.path.exists(out_dir):
                 os.makedirs(out_dir)
 
@@ -368,9 +373,11 @@ elif analysis_window == 'run':
             model_id = test_model.name.split(' ')[0]
 
             # #### Save correlation image
-            sub_outname = 'sub-{}_rsa-searchlight_{}_model-{}.nii.gz'.format(sub_id, 
-                                                                             run_label,
-                                                                             model_id)
+            sub_outname = 'sub-{}_{}_fwhm-{}_searchvox-{}_rsa-searchlight_model-{}.nii.gz'.format(sub_id, 
+                                                                                                  run_label,
+                                                                                                  fwhm,
+                                                                                                  searchrad,
+                                                                                                  model_id)
             out_fpath = os.path.join(out_dir, sub_outname)
             nib.save(plot_img, out_fpath)
             print('saved image to ', out_fpath)

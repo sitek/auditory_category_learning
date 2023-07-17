@@ -1,0 +1,38 @@
+participant ID:  FLT16 MNI152NLin2009cAsym first-level FWHM:  1.50 desired searchlight radius (in voxels):  5
+tone RDM:  [[0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1]
+ [0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1]
+ [0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1]
+ [0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1]
+ [1 1 1 1 0 0 0 0 1 1 1 1 1 1 1 1]
+ [1 1 1 1 0 0 0 0 1 1 1 1 1 1 1 1]
+ [1 1 1 1 0 0 0 0 1 1 1 1 1 1 1 1]
+ [1 1 1 1 0 0 0 0 1 1 1 1 1 1 1 1]
+ [1 1 1 1 1 1 1 1 0 0 0 0 1 1 1 1]
+ [1 1 1 1 1 1 1 1 0 0 0 0 1 1 1 1]
+ [1 1 1 1 1 1 1 1 0 0 0 0 1 1 1 1]
+ [1 1 1 1 1 1 1 1 0 0 0 0 1 1 1 1]
+ [1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0]
+ [1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0]
+ [1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0]
+ [1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0]]
+talker RDM:  [[0 1 1 1 0 1 1 1 0 1 1 1 0 1 1 1]
+ [1 0 1 1 1 0 1 1 1 0 1 1 1 0 1 1]
+ [1 1 0 1 1 1 0 1 1 1 0 1 1 1 0 1]
+ [1 1 1 0 1 1 1 0 1 1 1 0 1 1 1 0]
+ [0 1 1 1 0 1 1 1 0 1 1 1 0 1 1 1]
+ [1 0 1 1 1 0 1 1 1 0 1 1 1 0 1 1]
+ [1 1 0 1 1 1 0 1 1 1 0 1 1 1 0 1]
+ [1 1 1 0 1 1 1 0 1 1 1 0 1 1 1 0]
+ [0 1 1 1 0 1 1 1 0 1 1 1 0 1 1 1]
+ [1 0 1 1 1 0 1 1 1 0 1 1 1 0 1 1]
+ [1 1 0 1 1 1 0 1 1 1 0 1 1 1 0 1]
+ [1 1 1 0 1 1 1 0 1 1 1 0 1 1 1 0]
+ [0 1 1 1 0 1 1 1 0 1 1 1 0 1 1 1]
+ [1 0 1 1 1 0 1 1 1 0 1 1 1 0 1 1]
+ [1 1 0 1 1 1 0 1 1 1 0 1 1 1 0 1]
+ [1 1 1 0 1 1 1 0 1 1 1 0 1 1 1 0]]
+/bgfs/bchandrasekaran/krs228/data/FLT/data_bids/derivatives/nilearn/level-1_fwhm-1.50/sub-FLT16_space-MNI152NLin2009cAsym/run-all_LSS
+Traceback (most recent call last):
+  File "/ihome/bchandrasekaran/krs228/software/FLT/rsa/rsa_searchlight.py", line 212, in <module>
+    assert len(image_paths)
+AssertionError

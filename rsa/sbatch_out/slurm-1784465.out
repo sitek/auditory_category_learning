@@ -1,0 +1,14 @@
+participant ID:  FLT05 MNI152NLin2009cAsym 
+first-level FWHM:  1.50 
+desired searchlight radius (in voxels):  5
+loading stimulus dissimilarity matrices
+Traceback (most recent call last):
+  File "/ihome/bchandrasekaran/krs228/software/FLT/rsa/rsa_searchlight.py", line 215, in <module>
+    ffr_rdm_data = np.genfromtxt(ffr_rdm_fpath, delimiter=',', skip_header=1)
+  File "/bgfs/bchandrasekaran/krs228/software/miniconda3/envs/py3/lib/python3.9/site-packages/numpy/lib/npyio.py", line 1813, in genfromtxt
+    fid = np.lib._datasource.open(fname, 'rt', encoding=encoding)
+  File "/bgfs/bchandrasekaran/krs228/software/miniconda3/envs/py3/lib/python3.9/site-packages/numpy/lib/_datasource.py", line 193, in open
+    return ds.open(path, mode, encoding=encoding, newline=newline)
+  File "/bgfs/bchandrasekaran/krs228/software/miniconda3/envs/py3/lib/python3.9/site-packages/numpy/lib/_datasource.py", line 532, in open
+    raise FileNotFoundError(f"{path} not found.")
+FileNotFoundError: /bgfs/bchandrasekaran/ngg12/16tone/analysis_scripts/RDMs_kevin/FFRdistances_3010_Man.csv not found.

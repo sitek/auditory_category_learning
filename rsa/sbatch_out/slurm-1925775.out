@@ -1,0 +1,19 @@
+participant ID:  FLT28 MNI152NLin2009cAsym 
+first-level FWHM:  0.00 
+desired searchlight radius (in voxels):  9
+loading stimulus dissimilarity matrices
+loading FFR dissimilarity matrix
+16
+Traceback (most recent call last):
+  File "/bgfs/bchandrasekaran/krs228/software/miniconda3/envs/py3/lib/python3.9/site-packages/nibabel/loadsave.py", line 42, in load
+    stat_result = os.stat(filename)
+FileNotFoundError: [Errno 2] No such file or directory: '/bgfs/bchandrasekaran/krs228/data/FLT/data_bids/derivatives/nilearn/masks/sub-FLT28/space-MNI152NLin2009cAsym/masks-dseg/sub-FLT28_space-MNI152NLin2009cAsym_mask-gm.nii.gz'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/ihome/bchandrasekaran/krs228/software/FLT/rsa/rsa_searchlight.py", line 293, in <module>
+    mask_img = nib.load(mask_fpath)
+  File "/bgfs/bchandrasekaran/krs228/software/miniconda3/envs/py3/lib/python3.9/site-packages/nibabel/loadsave.py", line 44, in load
+    raise FileNotFoundError(f"No such file or no access: '{filename}'")
+FileNotFoundError: No such file or no access: '/bgfs/bchandrasekaran/krs228/data/FLT/data_bids/derivatives/nilearn/masks/sub-FLT28/space-MNI152NLin2009cAsym/masks-dseg/sub-FLT28_space-MNI152NLin2009cAsym_mask-gm.nii.gz'

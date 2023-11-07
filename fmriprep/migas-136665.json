@@ -1,0 +1,1 @@
+{"_pid": 136665, "endpoint": "https://migas.nipreps.org/graphql", "user_id": "e69bbf46-1d05-3eda-8f7e-bc420f9c4a5c", "session_id": "753c079d-3d25-48b6-88de-ecac448c079c", "language": "python", "language_version": "3.9.12", "platform": "linux", "container": "apptainer", "is_ci": false}

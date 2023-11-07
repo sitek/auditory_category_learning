@@ -27,7 +27,8 @@ parser = argparse.ArgumentParser(
                 epilog=('Example: python rsa_searchlight.py --sub=FLT02 '
                         ' --space=MNI152NLin2009cAsym '
                         ' --analysis_window=run '
-                        '--fwhm=1.5 --searchrad=3'
+                        ' --fwhm=1.5 --searchrad=3'
+                        ' --mask_dir=/PATH/TO/MASK/DIR/ '                        
                         ' --bidsroot=/PATH/TO/BIDS/DIR/ ' 
                         ' --fmriprep_dir=/PATH/TO/FMRIPREP/DIR/'))
 
@@ -42,6 +43,9 @@ parser.add_argument("--fwhm", help="spatial smoothing full-width half-max",
                     type=str)
 parser.add_argument("--searchrad", help="radius of searchlight (in voxels)", 
                     type=int)
+parser.add_argument("--mask_dir", 
+                    help="directory containing subdirectories with masks for each subject", 
+                    type=str)
 parser.add_argument("--bidsroot", 
                     help="top-level directory of the BIDS dataset", 
                     type=str)
@@ -60,6 +64,7 @@ space_label     = args.space
 analysis_window = args.analysis_window
 fwhm         = args.fwhm
 searchrad    = args.searchrad
+mask_dir     = args.mask_dir
 bidsroot     = args.bidsroot
 fmriprep_dir = args.fmriprep_dir
 
@@ -182,13 +187,15 @@ for dx, descrip in enumerate(model_rdms.rdm_descriptors['stimulus_model']):
     stim_models.append(spec_model)
 
 # ### FFR RDMs
+ffr_models = []
+'''
 ffr_strategy = 'group'
 if ffr_strategy == 'group':
     # start with grand average FFR
     print('loading FFR dissimilarity matrix')
     ffr_rdm_fpath = os.path.join(stim_rdm_dir, 'FFRdistancesgrandavg.csv')
     rdm_name = 'FFR_grandavg'
-    ffr_rdm_data = np.genfromtxt(fpath, delimiter=',', skip_header=1)
+    ffr_rdm_data = np.genfromtxt(ffr_rdm_fpath, delimiter=',', skip_header=1)
     print(len(ffr_rdm_data))
     
 elif ffr_strategy == 'participant':
@@ -224,6 +231,7 @@ ffr_rdm = RDMs(ffr_rdm_data[np.newaxis,:,:],
 ffr_model = ModelFixed('FFR_participant model', ffr_rdm)
 
 ffr_models = [ffr_model]
+'''
     
 # ### Categorical RDMs
 
@@ -284,7 +292,7 @@ cat_models = [tone_model, talker_model]
 all_models = stim_models + ffr_models + cat_models
 
 ''' Get searchlight and RDMs '''
-mask_fpath = os.path.join(deriv_dir, 'nilearn', 'masks', 
+mask_fpath = os.path.join(mask_dir, 
                           'sub-{}'.format(sub_id),
                           'space-{}'.format(space_label), 
                           'masks-dseg',

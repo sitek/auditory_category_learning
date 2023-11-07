@@ -65,7 +65,7 @@ def generate_mask(subject_id, fmriprep_dir, statmap_example_fpath, out_dir, spac
 nilearn_sub_dir = os.path.join(bidsroot, 'derivatives', 'nilearn', 
                                            'level-1_fwhm-%.02f'%fwhm, 
                                            'sub-%s_space-%s'%(subject_id, space_label))    
-statmap_example_fpath = sorted(glob(nilearn_sub_dir+'/*/run*/*di*beta.nii.gz'))[0]
+statmap_example_fpath = sorted(glob(nilearn_sub_dir+'/*/run*/*di*.nii.gz'))[0]
 
 sub_mask_dir = os.path.join(nilearn_dir, 'masks', 'sub-%s'%subject_id, 
                             'space-%s'%space_label, 'masks-dseg')   

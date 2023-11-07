@@ -93,7 +93,8 @@ nilearn_sub_dir = os.path.join(bidsroot, 'derivatives', 'nilearn',
                                            'level-1_fwhm-%.02f'%fwhm, 
                                            'sub-%s_space-%s'%(sub_id, space_label))    
 print(nilearn_sub_dir)
-zmap_example_fpath = z_maps = sorted(glob(nilearn_sub_dir+'/stimulus_per_run/run*/*di*beta.nii.gz'))[0]
+z_maps = sorted(glob(nilearn_sub_dir+'/stimulus_per_run*/run*/*di*.nii.gz'))
+zmap_example_fpath = z_maps[0]
 
 if space_label == 'T1w' and atlas_label == 'aparc': 
     atlas_fpath = os.path.join(fmriprep_dir, 'sub-%s'%sub_id, 'anat',

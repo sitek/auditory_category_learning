@@ -158,7 +158,7 @@ def nilearn_glm_across_runs(stim_list, task_label, model_type, \
             imgs = models_run_imgs[midx]
             #events = models_events[midx]
             confounds = models_confounds[midx]
-            if model_type = 'LSA':
+            if model_type == 'LSA':
                 events = models_events[midx]
             elif model_type == 'LSS':
                 events = [lss_transformer(models_events[midx][rx], stim) for rx in range(len(imgs))]
@@ -192,9 +192,14 @@ def nilearn_glm_across_runs(stim_list, task_label, model_type, \
             if not os.path.exists(nilearn_sub_dir):
                 os.makedirs(nilearn_sub_dir)
 
-            analysis_prefix = 'sub-%s_task-%s_fwhm-%.02f_space-%s_contrast-%s'%(model.subject_label,
-                                                                                task_label, model.smoothing_fwhm,
-                                                                                space_label, contrast_desc)
+            if model_type == 'LSS':
+                analysis_prefix = 'sub-%s_task-%s_fwhm-%.02f_space-%s_model-LSS_contrast-%s'%(model.subject_label,
+                                                                                    task_label, model.smoothing_fwhm,
+                                                                                    space_label, contrast_desc)
+            else:
+                analysis_prefix = 'sub-%s_task-%s_fwhm-%.02f_space-%s_contrast-%s'%(model.subject_label,
+                                                                                    task_label, model.smoothing_fwhm,
+                                                                                    space_label, contrast_desc)
             zmap_fpath = os.path.join(nilearn_sub_dir,
                                     analysis_prefix+'_zmap.nii.gz')
             nib.save(zmap, zmap_fpath)

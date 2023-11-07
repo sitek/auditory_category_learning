@@ -15,6 +15,7 @@ parser = argparse.ArgumentParser(
                 epilog=('Example: python multivariate_searchlight.py --sub=FLT02 '
                         ' --space=MNI152NLin2009cAsym --fwhm=1.5 --cond=tone '
                         ' --searchrad=9 --maptype=tstat '
+                        ' --mask_dir=/PATH/TO/MASK/DIR/ '
                         ' --bidsroot=/PATH/TO/BIDS/DIR/ '
                         '--fmriprep_dir=/PATH/TO/FMRIPREP/DIR/')
         )
@@ -29,9 +30,12 @@ parser.add_argument("--fwhm", help="spatial smoothing full-width half-max",
                     type=float)
 parser.add_argument("--cond", help="condition to analyze", 
                     type=str)
-parser.add_argument("--searchrad", help="searchlight radius (in voxels)", 
+parser.add_argument("--searchrad", help="searchlight radius (in mm)", 
                     type=str)
 parser.add_argument("--maptype", help="type of map to operate on (options: beta, tstat)", 
+                    type=str)
+parser.add_argument("--mask_dir", 
+                    help="directory containing subdirectories with masks for each subject", 
                     type=str)
 parser.add_argument("--bidsroot", 
                     help="top-level directory of the BIDS dataset", 
@@ -54,6 +58,7 @@ fwhm               = args.fwhm
 cond_label         = args.cond
 searchlight_radius = args.searchrad
 maptype            = args.maptype
+mask_dir           = args.mask_dir
 bidsroot           = args.bidsroot
 fmriprep_dir       = args.fmriprep_dir
 
@@ -116,8 +121,7 @@ brainmask_fpath = os.path.join(anat_dir,
 
 # use the whole brain gray matter mask
 mask_descrip = 'gm'
-masks_dir = os.path.join(nilearn_dir, 
-                         'masks', 
+masks_dir = os.path.join(mask_dir, 
                          'sub-%s'%subject_id, 
                          'space-%s'%space_label, 
                          'masks-dseg', )
@@ -127,7 +131,7 @@ mask_fpath = os.path.join(masks_dir,
                                                             mask_descrip))
 
 # run-specific stimulus stat maps
-model_desc = 'trial_models_LSS' # 'stimulus_per_run_LSS'
+model_desc = 'stimulus_per_run_LSS' # 'trial_models_LSS' 
 print('model description: {}'.format(model_desc))
 
 if analysis_window == 'session': # across all runs
@@ -143,8 +147,7 @@ if analysis_window == 'session': # across all runs
 
     # create output directory
     sub_out_dir = os.path.join(nilearn_sub_dir, 
-                               'searchlight_{}_radius-{}'.format(model_desc, 
-                                                                 searchlight_radius))
+                               f'mvpc-searchlight_fwhm-{fwhm}_searchmm-{searchlight_radius}_{model_desc}')
     if not os.path.exists(sub_out_dir):
         os.makedirs(sub_out_dir)
 
@@ -165,11 +168,12 @@ if analysis_window == 'session': # across all runs
 
     # save to an output file
     out_fpath = os.path.join(sub_out_dir, 
-                             'sub-{}_space-{}_mask-{}_cond-{}_map-{}_searchlight.nii.gz'.format(subject_id, 
-                                                                                                space_label, 
-                                                                                                mask_descrip, 
-                                                                                                cond_label, 
-                                                                                                maptype))
+                             'sub-{}_fwhm-{}_mask-{}_searchmm-{}_cond-{}_map-{}_searchlight.nii.gz'.format(subject_id, 
+                                                                                                            fwhm, 
+                                                                                                            mask_descrip, 
+                                                                                                            searchlight_radius,
+                                                                                                            cond_label, 
+                                                                                                            maptype))
     nib.save(searchlight_img, out_fpath)
     print('saved searchlight image to ', out_fpath)
 

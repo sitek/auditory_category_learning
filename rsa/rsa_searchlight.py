@@ -28,6 +28,7 @@ parser = argparse.ArgumentParser(
                         ' --space=MNI152NLin2009cAsym '
                         ' --analysis_window=run '
                         ' --fwhm=1.5 --searchrad=3'
+                        ' --contrast=sound '
                         ' --mask_dir=/PATH/TO/MASK/DIR/ '                        
                         ' --bidsroot=/PATH/TO/BIDS/DIR/ ' 
                         ' --fmriprep_dir=/PATH/TO/FMRIPREP/DIR/'))
@@ -43,6 +44,8 @@ parser.add_argument("--fwhm", help="spatial smoothing full-width half-max",
                     type=str)
 parser.add_argument("--searchrad", help="radius of searchlight (in voxels)", 
                     type=int)
+parser.add_argument("--contrast", help="contrast to analyze (options: sound, resp, fb)", 
+                    type=str)
 parser.add_argument("--mask_dir", 
                     help="directory containing subdirectories with masks for each subject", 
                     type=str)
@@ -62,8 +65,9 @@ if len(sys.argv) < 2:
 sub_id          = args.sub
 space_label     = args.space
 analysis_window = args.analysis_window
-fwhm         = args.fwhm
-searchrad    = args.searchrad
+fwhm           = args.fwhm
+searchrad      = args.searchrad
+contrast_label = args.contrast
 mask_dir     = args.mask_dir
 bidsroot     = args.bidsroot
 fmriprep_dir = args.fmriprep_dir
@@ -152,7 +156,7 @@ pattern_descriptors = {'tone': ['T1', 'T1', 'T1', 'T1',
                                   'M1', 'M2', 'F1', 'F2',
                                   'M1', 'M2', 'F1', 'F2', ],
                       }
-
+'''
 # ### Stimulus RDMs
 print('loading stimulus dissimilarity matrices')
 stim_rdm_dir = os.path.join('/bgfs/bchandrasekaran/ngg12/',
@@ -185,6 +189,7 @@ for dx, descrip in enumerate(model_rdms.rdm_descriptors['stimulus_model']):
     spec_model = ModelFixed( '{} RDM'.format(descrip), 
                             model_rdms.subset('stimulus_model', descrip))
     stim_models.append(spec_model)
+'''
 
 # ### FFR RDMs
 ffr_models = []
@@ -289,7 +294,8 @@ talker_model = ModelFixed( 'Talker RDM', model_rdms.subset('categorical_model',
 cat_models = [tone_model, talker_model]
 
 # ## Merge model lists
-all_models = stim_models + ffr_models + cat_models
+#all_models = stim_models + ffr_models + cat_models
+all_models = cat_models
 
 ''' Get searchlight and RDMs '''
 mask_fpath = os.path.join(mask_dir, 
@@ -318,7 +324,7 @@ if analysis_window == 'session':
                                model_desc)
 
     print(data_folder)
-    image_paths = sorted(glob('{}/*contrast-sound*map-tstat.nii.gz'.format(data_folder)))
+    image_paths = sorted(glob(f'{data_folder}/*contrast-{contrast_label}*map-tstat.nii.gz'))
     assert len(image_paths)
 
     SL_RDM, data = get_searchlight_rdm(mask_data, image_paths, centers, neighbors)
@@ -338,10 +344,11 @@ if analysis_window == 'session':
         model_id = test_model.name.split(' ')[0]
 
         # #### Save correlation image
-        sub_outname = 'sub-{}_fwhm-{}_searchvox-{}_rsa-searchlight_model-{}.nii.gz'.format(sub_id, 
-                                                                                           fwhm,
-                                                                                           searchrad,
-                                                                                           model_id)
+        sub_outname = 'sub-{}_fwhm-{}_searchvox-{}_rsa-searchlight_contrast-{}_model-{}.nii.gz'.format(sub_id, 
+                                                                                            fwhm,
+                                                                                            searchrad,
+                                                                                            contrast_label,
+                                                                                            model_id)
         out_fpath = os.path.join(out_dir, sub_outname)
         nib.save(plot_img, out_fpath)
         print('saved image to ', out_fpath)
@@ -360,7 +367,7 @@ elif analysis_window == 'run':
         # set this path to wherever you saved the folder containing the img-files
         data_folder = os.path.join(sub_model_folder, run_label)
         print('creating searchlight RDMs for ', run_label)
-        image_paths = sorted(glob('{}/*contrast-sound*map-tstat.nii.gz'.format(data_folder)))
+        image_paths = sorted(glob(f'{data_folder}/*contrast-{contrast_label}*map-tstat.nii.gz'))
         assert len(image_paths)
         print(image_paths)
 
@@ -381,10 +388,11 @@ elif analysis_window == 'run':
             model_id = test_model.name.split(' ')[0]
 
             # #### Save correlation image
-            sub_outname = 'sub-{}_{}_fwhm-{}_searchvox-{}_rsa-searchlight_model-{}.nii.gz'.format(sub_id, 
+            sub_outname = 'sub-{}_{}_fwhm-{}_searchvox-{}_rsa-searchlight_contrast-{}_model-{}.nii.gz'.format(sub_id, 
                                                                                                   run_label,
                                                                                                   fwhm,
                                                                                                   searchrad,
+                                                                                                  contrast_label,
                                                                                                   model_id)
             out_fpath = os.path.join(out_dir, sub_outname)
             nib.save(plot_img, out_fpath)

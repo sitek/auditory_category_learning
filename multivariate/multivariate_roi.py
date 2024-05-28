@@ -17,10 +17,12 @@ import matplotlib.pyplot as plt
 parser = argparse.ArgumentParser(
                 description='Subject-level multivariate ROI analysis',
                 epilog=('Example: python multivariate_roi.py --sub=FLT02 '
-                        ' --space=MNI152NLin2009cAsym --fwhm=1.5 --cond=tone '
+                        ' --space=MNI152NLin2009cAsym --fwhm=0.00 --cond=tone '
                         ' --searchrad=9 --maptype=tstat '
                         ' --bidsroot=/PATH/TO/BIDS/DIR/ '
-                        '--fmriprep_dir=/PATH/TO/FMRIPREP/DIR/')
+                        '--fmriprep_dir=/PATH/TO/FMRIPREP/DIR/'
+                        ' --mask_dir=/PATH/TO/MASK/DIR/ '
+                        )
         )
 
 parser.add_argument("--sub", help="participant id", 
@@ -31,7 +33,9 @@ parser.add_argument("--analysis_window", help="analysis window (options: session
                     type=str)
 parser.add_argument("--fwhm", help="spatial smoothing full-width half-max", 
                     type=float)
-parser.add_argument("--cond", help="condition to analyze", 
+parser.add_argument("--cond", help="condition to analyze (options: assigned, shuffled)", 
+                    type=str)
+parser.add_argument("--contrast", help="contrast to analyze (options: sound, resp, fb)", 
                     type=str)
 parser.add_argument("--searchrad", help="searchlight radius (in voxels)", 
                     type=str)
@@ -42,6 +46,9 @@ parser.add_argument("--bidsroot",
                     type=str)
 parser.add_argument("--fmriprep_dir", 
                     help="directory of the fMRIprep preprocessed dataset", 
+                    type=str)
+parser.add_argument("--mask_dir", 
+                    help="directory containing subdirectories with masks for each subject", 
                     type=str)
 
 args = parser.parse_args()
@@ -56,20 +63,58 @@ space_label        = args.space
 analysis_window    = args.analysis_window
 fwhm               = args.fwhm
 cond_label         = args.cond
+contrast_label     = args.contrast
 searchlight_radius = args.searchrad
 maptype            = args.maptype
 bidsroot           = args.bidsroot
 fmriprep_dir       = args.fmriprep_dir
+mask_dir           = args.mask_dir
 
 ''' define other inputs '''
 nilearn_dir = os.path.join(bidsroot, 'derivatives', 'nilearn')
 
-roi_list = ['L-IC', 'L-MGN',
-            'L-HG', 'L-PP', 'L-PT', 'L-STGa', 'L-STGp', 
-            'R-IC', 'R-MGN',
-            'R-HG', 'R-PP', 'R-PT', 'R-STGa', 'R-STGp', ]
+split_design = 'random' 
+model_desc = 'stimulus_per_run_LSS' # 'stimulus_per_run_LSS', 'trial_models_LSS'
 
-model_desc = 'stimulus_per_run_LSS'
+
+''' define regions of interest '''
+network_name = 'tian_subcortical_S3' # auditory
+
+if network_name == 'auditory':
+    roi_list = [
+                'L-IC', 'L-MGN', 'L-HG', 'L-PT',  'L-PP', 
+                'L-STGp', 'L-STGa', 'L-ParsOp', 'L-ParsTri',
+                'R-IC', 'R-MGN', 'R-HG', 'R-PT',  'R-PP', 
+                'R-STGp', 'R-STGa', 'R-ParsOp', 'R-ParsTri', 
+               ]
+elif network_name == 'aud-striatal':
+    roi_list = ['L-Caud', 'L-Put', 'L-IC', 'L-MGN',
+                'L-HG', 'L-PP', 'L-PT', 'L-STGa', 'L-STGp', 
+                'L-ParsOp', 'L-ParsTri',
+                'R-Caud', 'R-Put','R-IC', 'R-MGN',
+                'R-HG', 'R-PP', 'R-PT', 'R-STGa', 'R-STGp', 
+                'R-ParsOp', 'R-ParsTri',
+               ]
+elif network_name == 'tian_subcortical_S3':
+    roi_list = [
+                'CAU-DA-lh', 'CAU-VA-lh', 'pCAU-lh', 
+                'PUT-DA-lh', 'PUT-DP-lh', 'PUT-VA-lh', 'PUT-VP-lh',
+                'aGP-lh', 'pGP-lh', 'NAc-core-lh', 'NAc-shell-lh',
+                'CAU-DA-rh', 'CAU-VA-rh', 'pCAU-rh', 
+                'PUT-DA-rh', 'PUT-DP-rh', 'PUT-VA-rh', 'PUT-VP-rh',
+                'aGP-rh', 'pGP-rh', 'NAc-core-rh', 'NAc-shell-rh', 
+               ]
+num_rois = len(roi_list)
+    
+# output directory
+out_dir = os.path.join(
+                       nilearn_dir, 
+                       'level-1_fwhm-%.02f'%fwhm,
+                       'level-1_den_mvpc-roi',
+                       network_name,
+                       f'contrast-{contrast_label}')
+os.makedirs(out_dir, exist_ok=True)
+   
 
 ''' helper functions '''
 def create_labels(stat_maps):
@@ -103,36 +148,7 @@ def mask_fmri(fmri_niimgs, mask_filename, fwhm):
     fmri_masked = masker.fit_transform(fmri_niimgs)
     return fmri_masked, masker
 
-def sub_region_svc(sub_id, mask_fpath, stat_maps, cv, fwhm=1.5, space_label='T1w'):
-    from sklearn.svm import SVC
-    from sklearn.model_selection import cross_val_score
-    from sklearn.model_selection import permutation_test_score
-
-    #print(sub_id)
-    #print(os.path.basename(mask_fpath))
-          
-    conditions_tone, conditions_talker, conditions_all, conditions_shuffled = create_labels(stat_maps)
-
-    # extract beta values from stat maps for given region of interest
-    fmri_masked, masker = mask_fmri(stat_maps, mask_fpath, fwhm_sub)
-
-    svc = SVC()
-
-    tone_cv_scores = cross_val_score(svc, fmri_masked, conditions_tone, cv=cv)
-    print("Tone SVC accuracy: {:.3f} with a standard deviation of {:.2f}".format(tone_cv_scores.mean(),tone_cv_scores.std()))
-
-    talker_cv_scores = cross_val_score(svc, fmri_masked, conditions_talker, cv=cv)
-    print("Talker SVC accuracy: {:.3f} with a standard deviation of {:.2f}".format(talker_cv_scores.mean(),talker_cv_scores.std()))
-
-    null_cv_scores = permutation_test_score(svc, fmri_masked, conditions_tone, cv=cv, )[1]
-    print("Permutation test score: {:.3f} with a standard deviation of {:.2f}".format(null_cv_scores.mean(),null_cv_scores.std()))
-    
-    #plot_confusion_matrix(fmri_masked, conditions_tone, mask_descrip, sub_id)
-    #plot_confusion_matrix(fmri_masked, conditions_talker, mask_descrip, sub_id)
-    
-    return fmri_masked, tone_cv_scores, talker_cv_scores, null_cv_scores
-
-def plot_confusion_matrix(X, y, mask_descrip, sub_id):
+def plot_confusion_matrix(X, y, mask_descrip, subject_id):
     import numpy as np
     import matplotlib.pyplot as plt
 
@@ -150,7 +166,7 @@ def plot_confusion_matrix(X, y, mask_descrip, sub_id):
 
     np.set_printoptions(precision=2)
 
-    sub_title = 'sub-%s mask-%s'%(sub_id, mask_descrip)
+    sub_title = 'sub-%s mask-%s'%(subject_id, mask_descrip)
 
     # Plot non-normalized confusion matrix
     titles_options = [("Confusion matrix, without normalization", None),
@@ -175,49 +191,52 @@ def plot_confusion_matrix(X, y, mask_descrip, sub_id):
 
 
 ''' run pipeline '''
-print(sub_id)
+print(subject_id)
 
 fig, axs = plt.subplots(nrows=2, ncols=round(num_rois/2), figsize=(num_rois,6), dpi=300)
-fig.suptitle(sub_id)
+fig.suptitle(subject_id)
 
-nilearn_sub_dir = os.path.join(bidsroot, 'derivatives', 'nilearn', 
-                                   'level-1_fwhm-%.02f'%fwhm_sub, 
-                                   'sub-%s_space-%s'%(sub_id, space_label))
+nilearn_sub_dir = os.path.join(nilearn_dir, 
+                                   'level-1_fwhm-%.02f'%fwhm, 
+                                   'sub-%s_space-%s'%(subject_id, space_label))
 
 # run-specific stimulus stat maps
-stat_maps = sorted(glob(nilearn_sub_dir+f'/{model_desc}/run*/*di*map-{maptype}.nii.gz')) 
+stat_maps = sorted(glob(nilearn_sub_dir+f'/{model_desc}/run*/*{contrast_label}*map-{maptype}.nii.gz')) 
 print('# of stat maps: ', len(stat_maps))    
 #print(stat_maps)
 
 # generate condition labels based on filenames
 conditions_tone, conditions_talker, conditions_all, conditions_shuffled = create_labels(stat_maps)
+print(np.unique(conditions_tone))
 
 for mx, mask_descrip in enumerate(roi_list):
     # define the mask for the region of interest
     print(mask_descrip)
-    masks_dir = os.path.join(nilearn_dir, 'masks', 'sub-%s'%sub_id, 'space-%s'%space_label)
-    mask_fpath = glob(masks_dir + '/masks-*/' + 'sub-%s_space-%s_mask-%s.nii.gz'%(sub_id, space_label, mask_descrip))[0]
+    masks_dir = os.path.join(mask_dir, 'sub-%s'%subject_id, 'space-%s'%space_label)
+    mask_fpath = glob(masks_dir + '/masks-*/' + f'sub-{subject_id}_space-{space_label}_mask-{mask_descrip}.nii.gz')[0]
 
-    fmri_masked, masker = mask_fmri(stat_maps, mask_fpath, fwhm_sub)
+    fmri_masked, masker = mask_fmri(stat_maps, mask_fpath, fwhm)
 
     # Split the data into a training set and a test set
     x, y = fmri_masked, conditions_tone
-    '''
-    X_train, X_test, y_train, y_test = train_test_split(x,y, 
-                                                        test_size=0.25,
-                                                        random_state=0, 
-                                                        stratify=y)
-    '''
-    # split into male and female talker stimuli
-    stim_m_indices = [i for i, s in enumerate(conditions_all) if any(xs in s for xs in ['aN', 'bN'])]
-    stim_f_indices = [i for i, s in enumerate(conditions_all) if any(xs in s for xs in ['hN', 'iN'])]
+    if split_design == 'random':
 
-    # train male, test female
-    X_train = x[stim_m_indices]
-    y_train = [y[i] for i in stim_m_indices]
-    X_test = x[stim_f_indices]
-    y_test = [y[i] for i in stim_f_indices]
+        X_train, X_test, y_train, y_test = train_test_split(x,y, 
+                                                            test_size=0.25,
+                                                            random_state=0, 
+                                                            stratify=y)
 
+    elif split_design == 'talker-sex':
+        # split into male and female talker stimuli
+        stim_m_indices = [i for i, s in enumerate(conditions_all) if any(xs in s for xs in ['aN', 'bN'])]
+        stim_f_indices = [i for i, s in enumerate(conditions_all) if any(xs in s for xs in ['hN', 'iN'])]
+
+        # train male, test female
+        X_train = x[stim_m_indices]
+        y_train = [y[i] for i in stim_m_indices]
+        X_test = x[stim_f_indices]
+        y_test = [y[i] for i in stim_f_indices]
+        
     # Run classifier
     clf = svm.SVC(decision_function_shape='ovo').fit(X_train, y_train)
     y_pred = clf.predict(X_test)
@@ -227,8 +246,11 @@ for mx, mask_descrip in enumerate(roi_list):
     
     # save confusion matrix
     cm = confusion_matrix(y_test, y_pred, normalize='true',)
-    np.savetxt('sub-{}_mask-{}_label-{}_confusion_matrix.csv'.format(sub_id, mask_descrip, 'tone'), cm)
+    cm_out_fpath = os.path.join(out_dir, 
+                                f'sub-{subject_id}_mask-{mask_descrip}_contrast-{contrast_label}_label-{cond_label}_confusion_matrix.csv')
+    np.savetxt(cm_out_fpath, cm)
     
+    '''
     # add ROI confusion matrix to plot
     ax = plt.subplot(2, num_rois/2, mx + 1)
     cm_display = ConfusionMatrixDisplay.from_predictions(y_test, y_pred,
@@ -241,4 +263,5 @@ for mx, mask_descrip in enumerate(roi_list):
 
 # better spacing
 fig.tight_layout()
-fig.savefig(f'sub-{sub_id}_striatal_label-{cond_label}_confusion_matrices.png')
+fig.savefig(os.path.join(out_dir, f'sub-{subject_id}_network-{network_name}_contrast-{contrast_label}_label-{cond_label}_confusion_matrices.png'))
+'''

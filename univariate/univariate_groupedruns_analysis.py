@@ -30,7 +30,7 @@ parser.add_argument("--fwhm",
                     help="spatial smoothing full-width half-max", 
                     type=float)
 parser.add_argument("--event_type", 
-                    help="what to model (options: `stimulus` or `feedback`)", 
+                    help="what to model (options: `sound` or `stimulus` or `feedback`)", 
                     type=str)
 parser.add_argument("--t_acq", 
                     help=("BOLD acquisition time (if different from "
@@ -147,19 +147,28 @@ def prep_models_and_args(subject_id=None, task_id=None, fwhm=None, bidsroot=None
 
 # ### Across-runs GLM
 def nilearn_glm_grouped_runs(stim_list, task_label, models, models_run_imgs, \
-                            models_events, models_confounds, conf_keep_list, space_label):
+                            models_events, models_confounds, conf_keep_list, space_label, 
+                            event_type):
     from nilearn.reporting import make_glm_report
     
     #run_group_dict = {'firsthalf': [0, 1, 2], 
     #                  'secondhalf': [3, 4, 5]}
     run_group_dict = {'earlythird': [0, 1],
                       'middlethird': [2, 3],
-		      'latethird': [4, 5]}
+                      'latethird': [4, 5]}
 
     for midx in range(len(models)):
+        # only run a single contrast if feedback condition
+        if event_type == 'feedback':
+            stim_list = ['fb-correct-vs-wrong']
+            
         for sx, stim in enumerate(stim_list):
-            contrast_label = stim
-            contrast_desc  = stim
+            if event_type == 'feedback':
+                contrast_label = 'fb_correct - fb_wrong'
+                contrast_desc  = stim
+            else:
+                contrast_label = stim
+                contrast_desc  = stim
 
 
             model = models[midx]
@@ -244,4 +253,5 @@ zmap_fpath, statmap_fpath, \
             contrast_label = nilearn_glm_grouped_runs(stim_list, task_label, 
                                                      models, models_run_imgs, 
                                                      models_events, models_confounds, 
-                                                     conf_keep_list, space_label)
+                                                     conf_keep_list, space_label,
+                                                     event_type)

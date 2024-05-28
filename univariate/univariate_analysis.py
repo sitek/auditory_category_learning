@@ -30,7 +30,7 @@ parser.add_argument("--fwhm",
                     help="spatial smoothing full-width half-max", 
                     type=float)
 parser.add_argument("--event_type", 
-                    help="what to model (options: `stimulus` or `feedback`)", 
+                    help="what to model (options: `stimulus` or `trial` or `sound` or None)", 
                     type=str)
 parser.add_argument("--t_acq", 
                     help=("BOLD acquisition time (if different from "
@@ -126,8 +126,8 @@ def prep_models_and_args(subject_id=None, task_id=None, fwhm=None, bidsroot=None
                 run_events['trial_type'] = run_events['trial_type'] + \
                                                     '_trial' + suffix.map(str)
                 run_events['trial_type'] = run_events['trial_type'].str.replace('-','_')
-
-            # all sound events
+  
+            # combine all sound events
             elif event_type == 'sound':
                 orig_stim_list = sorted([str(s) for s in run_events['trial_type'].unique() 
                                          if str(s) not in ['nan', 'None', 'null']])

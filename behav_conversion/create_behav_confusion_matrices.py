@@ -7,35 +7,49 @@ from glob import glob
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from seaborn import heatmap
 
-task_id = 'tonecat'
+project_dir = os.path.join('/bgfs/bchandrasekaran/krs228/data/', 'FLT/')
 
-project_dir = os.path.join('/bgfs/bchandrasekaran/krs228/data/', 'FLT')
-bids_dir    = os.path.join(project_dir, 'data_bids')
+bidsroot = os.path.join(project_dir, 'data_denoised')
+deriv_dir = os.path.join(bidsroot, 'derivatives')
+fmriprep_dir = os.path.join(deriv_dir, 'denoised_fmriprep-22.1.1')
 
-participants_fpath = os.path.join(bids_dir, 'participants.tsv')
+beh_out_dir = os.path.join(deriv_dir, 'behavior')
+
+task_list = ['tonecat']
+task_label = task_list[0]
+
+participants_fpath = os.path.join(bidsroot, 'participants.tsv')
 participants_df = pd.read_csv(participants_fpath, sep='\t')
 
 # subjects to ignore (not fully processed, etc.)
-ignore_subs = ['sub-FLT01', ]
-participants_df.drop(participants_df[participants_df.participant_id.isin(ignore_subs)].index,
-                     inplace=True)
+ignore_subs = ['sub-FLT27',
+               'sub-FLT07', # bad QA 11/14/23
+               'sub-FLT02', # missing resp_6 in run00 (pressing wrong keys)
+               #'sub-FLT10', # MISSING 11/16/23
+               #'sub-FLT01', 'sub-FLT16',  
+               #'sub-FLT19', 'sub-FLT20',
+               #'sub-FLT28', 'sub-FLT30',
+              ]
+participants_df.drop(participants_df[participants_df.participant_id.isin(ignore_subs)].index, inplace=True)
 
 # re-sort by participant ID
-participants_df.sort_values(by=['participant_id'], 
-                            ignore_index=True, 
-                            inplace=True)
+participants_df.sort_values(by=['participant_id'], ignore_index=True, inplace=True)
 
-participant_list = list(participants_df.participant_id)
+# create group-specific lists of subject IDs
+sub_list_mand = list(participants_df.participant_id[participants_df.group=='Mandarin'])
+sub_list_nman = list(participants_df.participant_id[participants_df.group=='non-Mandarin'])
+sub_dict = {'Mandarin': sub_list_mand, 'non-Mandarin': sub_list_nman}
+participant_list = sub_list_mand + sub_list_nman
 
 for sub_id in participant_list:
     print(sub_id)
-    out_dir = os.path.join(bids_dir, 'derivatives', 
-                           'behav_confusion_matrices',
-                           sub_id)
-    os.makedirs(out_dir, exist_ok=True)
     
-    sub_bids_dir = os.path.join(bids_dir, sub_id, 'func')
-    bids_tsv_list = sorted(glob(sub_bids_dir+'/{}*{}*.tsv'.format(sub_id, task_id)))
+    # make output directory
+    sub_beh_out_dir = os.path.join(beh_out_dir, sub_id)
+    os.makedirs(sub_beh_out_dir, exist_ok=True)
+        
+    sub_bids_dir = os.path.join(bidsroot, sub_id, 'func')
+    bids_tsv_list = sorted(glob(sub_bids_dir+f'/{sub_id}*{task_label}*.tsv'))
 
     for run_tsv in bids_tsv_list:
         tsv_pd = pd.read_csv(run_tsv, sep='\t')
@@ -58,18 +72,11 @@ for sub_id in participant_list:
                                                         ['1', '2', '3', '4'])
 
         cm = confusion_matrix(renum_simple_df['correct_key'], renum_simple_df['trial_type'], normalize='true')
-        out_fpath = os.path.join(out_dir, '{}_{}_tonecat_confusion_matrix.tsv'.format(sub_id, run_id))
+        
+        # save category x category confusion matrix
+        out_fpath = os.path.join(sub_beh_out_dir, f'{sub_id}_{run_id}_tonecat_confusion_matrix.tsv')
         np.savetxt(out_fpath, cm, delimiter = '\t')
 
-        '''
-        fig, ax = plt.subplots()
-        disp = ConfusionMatrixDisplay.from_predictions(renum_simple_df['correct_key'], renum_simple_df['trial_type'],  
-                                                       ax=ax,
-                                                       display_labels=['T1', 'T2', 'T3', 'T4'],
-                                                       cmap='Blues', colorbar=False, include_values=False,)
-        ax.set_title(sub_id)
-        #fig.savefig('behav_confusion_matrices/sub-{}_behav_confusion_matrix.png'.format(sub_id))
-        '''
         print('sub-{} {} tone accuracy = {:.03f}'.format(sub_id, run_id, cm.diagonal().mean()))
 
         ''' Stimulus-based behavioral RDMs '''
@@ -106,7 +113,6 @@ for sub_id in participant_list:
                     stim_responses.append(np.nan)
             all_stim_responses.append(stim_responses)
 
-
         # compare responses across stimuli
         n_stim = len(all_stim_responses)
         stim_conf_mat = np.zeros((n_stim, n_stim))
@@ -115,6 +121,7 @@ for sub_id in participant_list:
                 mean_val = np.mean([int(all_stim_responses[srx][x] == all_stim_responses[sry][x]) for x in range(3)])
                 stim_conf_mat[srx, sry] = mean_val
 
-        # save output matrix
-        out_fpath = os.path.join(out_dir, '{}_{}_stimulus_confusion_matrix.tsv'.format(sub_id, run_id))
-        np.savetxt(out_fpath, stim_conf_mat, delimiter='\t')
+        # save output stim x stim matrix
+        sub_run_out_fpath = os.path.join(sub_beh_out_dir, 
+                                         f'{sub_id}_{run_id}_stimulus_confusion_matrix.tsv')
+        np.savetxt(sub_run_out_fpath, stim_conf_mat, delimiter='\t')

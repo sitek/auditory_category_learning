@@ -28,7 +28,9 @@ parser.add_argument("--analysis_window", help="analysis window (options: session
                     type=str)
 parser.add_argument("--fwhm", help="spatial smoothing full-width half-max", 
                     type=float)
-parser.add_argument("--cond", help="condition to analyze", 
+parser.add_argument("--cond", help="condition to analyze (options: assigned, shuffled)", 
+                    type=str)
+parser.add_argument("--contrast", help="contrast to analyze (options: sound, resp, fb)", 
                     type=str)
 parser.add_argument("--searchrad", help="searchlight radius (in mm)", 
                     type=str)
@@ -56,6 +58,7 @@ space_label        = args.space
 analysis_window    = args.analysis_window
 fwhm               = args.fwhm
 cond_label         = args.cond
+contrast_label     = args.contrast
 searchlight_radius = args.searchrad
 maptype            = args.maptype
 mask_dir           = args.mask_dir
@@ -131,12 +134,11 @@ mask_fpath = os.path.join(masks_dir,
                                                             mask_descrip))
 
 # run-specific stimulus stat maps
-model_desc = 'stimulus_per_run_LSS' # 'trial_models_LSS' 
+model_desc =  'trial_models_LSS' # 'trial_models_LSS', 'stimulus_per_run_LSS' 
 print('model description: {}'.format(model_desc))
 
 if analysis_window == 'session': # across all runs
-    stat_maps = sorted(glob(nilearn_sub_dir+'/{}/run*/*di*map-{}.nii.gz'.format(model_desc, 
-                                                                                maptype))) 
+    stat_maps = sorted(glob(nilearn_sub_dir + f'/{model_desc}/run*/*contrast-{contrast_label}*map-{maptype}.nii.gz')) 
     print('# of stat maps: ', len(stat_maps))   
 
     f_affine = nib.load(stat_maps[0]).affine
@@ -156,7 +158,7 @@ if analysis_window == 'session': # across all runs
     print('running searchlight on {} with mask {} and labels {}'.format(subject_id, 
                                                                         mask_descrip, 
                                                                         cond_label))
-    if cond_label == 'tone':
+    if cond_label == 'assigned':
         searchlight = fit_searchlight(mask_fpath, brainmask_fpath, stat_maps, 
                                       conditions_tone, searchlight_radius)
     elif cond_label == 'shuffled':
@@ -168,10 +170,11 @@ if analysis_window == 'session': # across all runs
 
     # save to an output file
     out_fpath = os.path.join(sub_out_dir, 
-                             'sub-{}_fwhm-{}_mask-{}_searchmm-{}_cond-{}_map-{}_searchlight.nii.gz'.format(subject_id, 
+                             'sub-{}_fwhm-{}_mask-{}_searchmm-{}_contrast-{}_cond-{}_map-{}_searchlight.nii.gz'.format(subject_id, 
                                                                                                             fwhm, 
                                                                                                             mask_descrip, 
                                                                                                             searchlight_radius,
+                                                                                                            contrast_label,
                                                                                                             cond_label, 
                                                                                                             maptype))
     nib.save(searchlight_img, out_fpath)
@@ -180,9 +183,9 @@ if analysis_window == 'session': # across all runs
 elif analysis_window == 'run': # within a single run
     run_labels = [os.path.basename(x) for x in sorted(glob(nilearn_sub_dir+'/{}/run*'.format(model_desc)))]
     for rx, run_label in enumerate(run_labels):
-        stat_maps = sorted(glob(nilearn_sub_dir+'/{}/{}/*di*map-{}.nii.gz'.format(model_desc, 
-                                                                                  run_label,
-                                                                                  maptype))) 
+        stat_maps = sorted(glob(nilearn_sub_dir + 
+                                f'/{model_desc}/{run_label}' +
+                                f'/*contrast-{contrast_label}*map-{maptype}.nii.gz')) 
         print('# of stat maps: ', len(stat_maps))   
 
         f_affine = nib.load(stat_maps[0]).affine
@@ -204,7 +207,7 @@ elif analysis_window == 'run': # within a single run
                                                                                run_label, 
                                                                                mask_descrip, 
                                                                                cond_label))
-        if cond_label == 'tone':
+        if cond_label == 'assigned':
             searchlight = fit_searchlight(mask_fpath, brainmask_fpath, stat_maps, 
                                           conditions_tone, searchlight_radius)
         elif cond_label == 'shuffled':
@@ -216,10 +219,11 @@ elif analysis_window == 'run': # within a single run
 
         # save to an output file
         out_fpath = os.path.join(sub_out_dir, 
-                                 'sub-{}_space-{}_{}_mask-{}_cond-{}_map-{}_searchlight.nii.gz'.format(subject_id, 
+                                 'sub-{}_space-{}_{}_mask-{}_contrast-{}_cond-{}_map-{}_searchlight.nii.gz'.format(subject_id, 
                                                                                                        space_label, 
                                                                                                        run_label,
                                                                                                        mask_descrip, 
+                                                                                                       contrast_label, 
                                                                                                        cond_label, 
                                                                                                        maptype))
         nib.save(searchlight_img, out_fpath)

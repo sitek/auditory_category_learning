@@ -179,94 +179,102 @@ def nilearn_glm_per_run(stim_list, task_label, \
             contrast_label = stim
             contrast_desc  = stim
             
-            if event_filter in stim:
-                print('running GLM with stimulus ', stim)
+            #if event_filter in stim: run on only sound events
+            #if event_filter not in stim: # run on non-sound events
+            print('running GLM with stimulus ', stim)
 
-                model = models[midx]
+            model = models[midx]
 
-                print(model.subject_label)
+            print(model.subject_label)
 
-                # set limited confounds
-                print('selecting confounds')
-                confounds_ltd = [models_confounds[midx][cx][conf_keep_list] for cx in range(len(models_confounds[midx]))]
+            # set limited confounds
+            print('selecting confounds')
+            confounds_ltd = [models_confounds[midx][cx][conf_keep_list] for cx in range(len(models_confounds[midx]))]
 
-                # for each run
-                for rx in range(len(confounds_ltd)):
-                    img = models_run_imgs[midx][rx]
-                    confound = confounds_ltd[rx]
-                    
-                    if model_type == 'LSA':
-                        event = models_events[midx][rx]
-                    elif model_type == 'LSS':
-                        event = lss_transformer(models_events[midx][rx], stim)
-                    print(sorted(event.trial_type.unique()))
-                    
-                    try:
-                        # fit the GLM
-                        print('fitting GLM on ', img)
-                        model.fit(img, event, confound);
+            # for each run
+            for rx in range(len(confounds_ltd)):
+                img = models_run_imgs[midx][rx]
+                confound = confounds_ltd[rx]
 
-                        # compute the contrast of interest
-                        print('computing contrast of interest', 
-                              ' with contrast label = ', contrast_label)
-                        summary_statistics = model.compute_contrast(contrast_label, 
-                                                                    output_type='all')
-                        zmap = summary_statistics['z_score']
-                        tmap = summary_statistics['stat']
-                        statmap = summary_statistics['effect_size']
+                if model_type == 'LSA':
+                    event = models_events[midx][rx]
+                elif model_type == 'LSS':
+                    event = lss_transformer(models_events[midx][rx], stim)
+                print(sorted(event.trial_type.unique()))
 
-                        # save stat map
-                        print('saving beta map')
-                        nilearn_sub_dir = os.path.join(bidsroot, 
-                                                       'derivatives', 
-                                                       'nilearn', 
-                                                    'level-1_fwhm-%.02f'%model.smoothing_fwhm, 
-                                                    'sub-%s_space-%s'%(model.subject_label, 
-                                                                       space_label))
-                        nilearn_sub_run_dir = os.path.join(nilearn_sub_dir, 
-                                                           'stimulus_per_run_%s'%model_type, 
-                                                           'run%02d'%rx)
+                try:
+                    # fit the GLM
+                    print('fitting GLM on ', img)
+                    model.fit(img, event, confound);
 
-                        if not os.path.exists(nilearn_sub_run_dir):
-                            os.makedirs(nilearn_sub_run_dir)
+                    # compute the contrast of interest
+                    print('computing contrast of interest', 
+                          ' with contrast label = ', contrast_label)
+                    summary_statistics = model.compute_contrast(contrast_label, 
+                                                                output_type='all')
+                    zmap = summary_statistics['z_score']
+                    tmap = summary_statistics['stat']
+                    statmap = summary_statistics['effect_size']
+                    varmap = summary_statistics['effect_variance']
 
-                        analysis_prefix = ('sub-%s_task-%s_fwhm-%.02f_'
-                                           'space-%s_contrast-%s_run%02d_'
-                                           'model-%s'%(model.subject_label,
-                                                       task_label, model.smoothing_fwhm,
-                                                       space_label, contrast_desc,
-                                                       rx, model_type))
-                        statmap_fpath = os.path.join(nilearn_sub_run_dir,
-                                                analysis_prefix+'_map-beta.nii.gz')
+                    # save stat maps
+                    print('saving stat maps')
+                    nilearn_sub_dir = os.path.join(bidsroot, 
+                                                   'derivatives', 
+                                                   'nilearn', 
+                                                'level-1_fwhm-%.02f'%model.smoothing_fwhm, 
+                                                'sub-%s_space-%s'%(model.subject_label, 
+                                                                   space_label))
+                    nilearn_sub_run_dir = os.path.join(nilearn_sub_dir, 
+                                                       'stimulus_per_run_%s'%model_type, 
+                                                       'run%02d'%rx)
 
-                        nib.save(statmap, statmap_fpath)
-                        print('saved beta map to ', statmap_fpath)
+                    if not os.path.exists(nilearn_sub_run_dir):
+                        os.makedirs(nilearn_sub_run_dir)
 
-                        # save t map
-                        tmap_fpath = os.path.join(nilearn_sub_run_dir,
-                                                analysis_prefix+'_map-tstat.nii.gz')
-                        nib.save(tmap, tmap_fpath)
-                        print('saved t map to ', tmap_fpath)
+                    analysis_prefix = ('sub-%s_task-%s_fwhm-%.02f_'
+                                       'space-%s_contrast-%s_run%02d_'
+                                       'model-%s'%(model.subject_label,
+                                                   task_label, model.smoothing_fwhm,
+                                                   space_label, contrast_desc,
+                                                   rx, model_type))
+                    statmap_fpath = os.path.join(nilearn_sub_run_dir,
+                                            analysis_prefix+'_map-beta.nii.gz')
 
-                        '''
-                        # save residuals
-                        resid_fpath = os.path.join(nilearn_sub_run_dir,
-                                                analysis_prefix+'_map-residuals.nii.gz')
-                        nib.save(model.residuals[0], resid_fpath)
-                        print('saved residuals map to ', resid_fpath)
-                        '''
+                    nib.save(statmap, statmap_fpath)
+                    print('saved beta map to ', statmap_fpath)
 
-                        # save report
-                        print('saving report')
-                        report_fpath = os.path.join(nilearn_sub_run_dir,
-                                                    analysis_prefix+'_report.html')
-                        report = make_glm_report(model=model,
-                                                contrasts=contrast_label)
-                        report.save_as_html(report_fpath)
-                        print('saved report to ', report_fpath)
+                    # save t map
+                    tmap_fpath = os.path.join(nilearn_sub_run_dir,
+                                            analysis_prefix+'_map-tstat.nii.gz')
+                    nib.save(tmap, tmap_fpath)
+                    print('saved t map to ', tmap_fpath)
 
-                    except:
-                        print('could not run for ', img, ' with ', contrast_label)
+                    # save var map
+                    varmap_fpath = os.path.join(nilearn_sub_run_dir,
+                                            analysis_prefix+'_map-var.nii.gz')
+                    nib.save(varmap, varmap_fpath)
+                    print('saved var map to ', varmap_fpath)
+
+                    '''
+                    # save residuals
+                    resid_fpath = os.path.join(nilearn_sub_run_dir,
+                                            analysis_prefix+'_map-residuals.nii.gz')
+                    nib.save(model.residuals[0], resid_fpath)
+                    print('saved residuals map to ', resid_fpath)
+                    '''
+
+                    # save report
+                    print('saving report')
+                    report_fpath = os.path.join(nilearn_sub_run_dir,
+                                                analysis_prefix+'_report.html')
+                    report = make_glm_report(model=model,
+                                            contrasts=contrast_label)
+                    report.save_as_html(report_fpath)
+                    print('saved report to ', report_fpath)
+
+                except:
+                    print('could not run for ', img, ' with ', contrast_label)
           
 ''' Multivariate analysis: across-run GLM '''
 print('running with subject ', subject_id)

@@ -215,9 +215,10 @@ def nilearn_glm_per_run(stim_list, task_label, \
                     zmap = summary_statistics['z_score']
                     tmap = summary_statistics['stat']
                     statmap = summary_statistics['effect_size']
+                    varmap = summary_statistics['effect_variance']
 
-                    # save stat map
-                    print('saving beta map')
+                    # save stat maps
+                    print('saving stat maps')
                     nilearn_sub_dir = os.path.join(bidsroot, 
                                                    'derivatives', 
                                                    'nilearn', 
@@ -248,6 +249,12 @@ def nilearn_glm_per_run(stim_list, task_label, \
                                             analysis_prefix+'_map-tstat.nii.gz')
                     nib.save(tmap, tmap_fpath)
                     print('saved t map to ', tmap_fpath)
+
+                    # save var map
+                    varmap_fpath = os.path.join(nilearn_sub_run_dir,
+                                            analysis_prefix+'_map-var.nii.gz')
+                    nib.save(varmap, varmap_fpath)
+                    print('saved var map to ', varmap_fpath)
 
                     '''
                     # save residuals

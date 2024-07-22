@@ -24,7 +24,7 @@ parser.add_argument("--fwhm", help="spatial smoothing full-width half-max",
                     type=float)
 parser.add_argument("--atlas_label", 
                     help=("name of custom atlas label (options: "
-                          " `subcort_aud`, `carpet_dseg`, `aparc`"), 
+                          " `subcort_aud`, `carpet_dseg`, `aparc`, `carpet_motor`"), 
                     type=str)
 parser.add_argument("--bidsroot", 
                     help="top-level directory of the BIDS dataset", 
@@ -51,14 +51,26 @@ deriv_dir = os.path.join(bidsroot, 'derivatives')
 nilearn_dir = os.path.join(deriv_dir, 'nilearn')
 
 ''' define atlas region dictionaries '''
-roi_dict_MNI_dseg = {'L-Caud': 35, 'L-Put': 36, 'L-HG': 189, 'L-PP': 187, 
+roi_dict_MNI_dseg = {'L-Caud': 35, 'L-Put': 36, 'L-Pall': 37, 'L-Accumb': 41, 
+                     'L-HG': 189, 'L-PP': 187, 
                      'L-PT': 191, 'L-STGa': 117, 'L-STGp': 119, 
                      'L-ParsOp': 111, 'L-ParsTri': 109, 
+                     'L-SMGa': 137, 'L-SMGp': 139, 'L-Ang': 141,
                      'L-Lat-Ventricle': 3, 'L-Supracalcarine': 193,
-                     'R-Caud': 46, 'R-Put': 47, 'R-HG': 190, 'R-PP': 188, 
+                     'R-Caud': 46, 'R-Put': 47, 'R-Pall': 48, 'R-Accumb': 45, 
+                     'R-HG': 190, 'R-PP': 188, 
                      'R-PT': 192, 'R-STGa': 118, 'R-STGp': 120, 
                      'R-ParsOp': 112, 'R-ParsTri': 110, 
-                     'R-Lat-Ventricle': 4, 'R-Supracalcarine': 194,}
+                     'R-Lat-Ventricle': 4, 'R-Supracalcarine': 194,
+                     'R-SMGa': 138, 'R-SMGp': 140, 'R-Ang': 142, 
+                    }
+roi_dict_MNI_motor = {'L-Caud': 35, 'L-Put': 36, 
+                      'R-Caud': 46, 'R-Put': 47, 
+                      'L-Precentral': 113, 'R-Precentral': 114,
+                      'L-Postcentral': 133, 'R-Postcentral': 134,
+                      'L-SMA': 151, 'R-SMA': 152,
+                      'CerebMidb': 255,
+                      }
 roi_dict_T1w_aseg = {'L-VentralDC': 28, 'L-Caud': 11, 'L-Put': 12, 
                      'L-HG': 1034, 'L-STG': 1030, 'L-ParsOp': 1018, 
                      'L-ParsTri': 1020, 'L-SFG': 1028, 'Brainstem': 16, 
@@ -67,6 +79,35 @@ roi_dict_T1w_aseg = {'L-VentralDC': 28, 'L-Caud': 11, 'L-Put': 12,
                      'R-ParsTri': 2020, 'R-SFG': 2028, 'CSF': 24}
 roi_dict_MNI_sg_subcort = {'L-CN': 1, 'L-SOC': 3, 'L-IC': 5, 'L-MGN': 7, 
                            'R-CN': 2, 'R-SOC': 4, 'R-IC': 6, 'R-MGN': 8, }
+
+roi_dict_tian_S3 = {}
+tian_sc_S3_roi_list = ['HIP-head-m-rh','HIP-head-l-rh','HIP-body-m-rh','HIP-body-l-rh',
+                        'AMY-SM-rh','AMY-CL-rh',
+                        'THA-DPl-rh','THA-DPm-rh',
+                        'THA-VPm-rh','THA-VPl-rh',
+                        'THA-VAi-rh','THA-VAs-rh',
+                        'THA-DAm-rh','THA-DAl-rh',
+                        'PUT-VA-rh','PUT-DA-rh',
+                        'PUT-VP-rh','PUT-DP-rh',
+                        'CAU-VA-rh','CAU-DA-rh',
+                        'HIP-tail-rh','lAMY-rh',
+                        'pGP-rh','aGP-rh',
+                        'NAc-shell-rh','NAc-core-rh','pCAU-rh',
+                        'HIP-head-m-lh','HIP-head-l-lh','HIP-body-m-lh','HIP-body-l-lh',
+                        'AMY-SM-lh','AMY-CL-lh',
+                        'THA-DPl-lh','THA-DPm-lh',
+                        'THA-VPm-lh','THA-VPl-lh',
+                        'THA-VAi-lh','THA-VAs-lh',
+                        'THA-DAm-lh','THA-DAl-lh',
+                        'PUT-VA-lh','PUT-DA-lh',
+                        'PUT-VP-lh', 'PUT-DP-lh',
+                        'CAU-VA-lh','CAU-DA-lh',
+                        'HIP-tail-lh','lAMY-lh',
+                        'pGP-lh','aGP-lh',
+                        'NAc-shell-lh','NAc-core-lh','pCAU-lh'
+                        ]
+for rx, roi in enumerate(tian_sc_S3_roi_list):
+    roi_dict_tian_S3[roi] = rx+1
 
 ''' mask function '''
 def generate_mask(sub_id, zmap_example_fpath, atlas_fpath, labelnum, labelname, out_dir, spacelabel):
@@ -111,6 +152,13 @@ elif space_label == 'MNI152NLin2009cAsym' and atlas_label == 'carpet_dseg':
     sub_mask_dir = os.path.join(nilearn_dir, 'masks', 'sub-%s'%sub_id, 
                                 'space-%s'%space_label, 'masks-dseg')  
     roi_dict = roi_dict_MNI_dseg
+elif space_label == 'MNI152NLin2009cAsym' and atlas_label == 'carpet_motor': 
+    atlas_fpath = os.path.join('/bgfs/bchandrasekaran/krs228/data/',
+                               'reference/', 
+                               'tpl-MNI152NLin2009cAsym_res-01_desc-carpet_dseg.nii.gz')  
+    sub_mask_dir = os.path.join(nilearn_dir, 'masks', 'sub-%s'%sub_id, 
+                                'space-%s'%space_label, 'masks-dseg-motor')  
+    roi_dict = roi_dict_MNI_motor
 elif space_label == 'MNI152NLin2009cAsym' and atlas_label == 'subcort_aud':
     atlas_fpath = os.path.join('/bgfs/bchandrasekaran/krs228/data/',
                                'reference/MNI_space/atlases',
@@ -118,6 +166,13 @@ elif space_label == 'MNI152NLin2009cAsym' and atlas_label == 'subcort_aud':
     sub_mask_dir = os.path.join(nilearn_dir, 'masks', 'sub-%s'%sub_id, 
                                 'space-%s'%space_label, 'masks-subcort-aud') 
     roi_dict = roi_dict_MNI_sg_subcort
+elif space_label == 'MNI152NLin2009cAsym' and atlas_label == 'tian_S3':
+    atlas_fpath = os.path.join('/bgfs/bchandrasekaran/krs228/data/',
+                               'reference/subcortex/Group-Parcellation/7T',
+                               'Tian_Subcortex_S3_7T.nii')
+    sub_mask_dir = os.path.join(nilearn_dir, 'masks', 'sub-%s'%sub_id, 
+                                'space-%s'%space_label, 'masks-tian-S3') 
+    roi_dict = roi_dict_tian_S3
 else:
     print('mismatch between space label and atlas label')
 if not os.path.exists(sub_mask_dir):

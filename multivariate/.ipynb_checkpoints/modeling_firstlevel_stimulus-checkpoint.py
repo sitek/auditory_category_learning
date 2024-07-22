@@ -205,8 +205,10 @@ def nilearn_glm_across_runs(stim_list, task_label, \
                 zmap = summary_statistics['z_score']
                 tmap = summary_statistics['stat']
                 statmap = summary_statistics['effect_size']
+                varmap = summary_statistics['effect_variance']
 
-                # save z map
+
+                # prepare to save stat maps
                 print('saving stat maps')
                 nilearn_sub_dir = os.path.join(bidsroot, 'derivatives', 'nilearn', 
                                             'level-1_fwhm-%.02f'%model.smoothing_fwhm, 
@@ -222,6 +224,7 @@ def nilearn_glm_across_runs(stim_list, task_label, \
                                                space_label, contrast_desc,
                                                model_type))
                 
+                # save z maps
                 zmap_fpath = os.path.join(nilearn_sub_dir,
                                         analysis_prefix+'_map-zstat.nii.gz')
                 nib.save(zmap, zmap_fpath)
@@ -232,12 +235,13 @@ def nilearn_glm_across_runs(stim_list, task_label, \
                                         analysis_prefix+'_map-tstat.nii.gz')
                 nib.save(tmap, tmap_fpath)
                 print('saved t map to ', tmap_fpath)
-                # also save beta maps
-                statmap_fpath = os.path.join(nilearn_sub_dir,
-                                            analysis_prefix+'_map-beta.nii.gz')
-                nib.save(statmap, statmap_fpath)
-                print('saved beta map to ', statmap_fpath)
 
+                # save var map
+                varmap_fpath = os.path.join(nilearn_sub_dir,
+                                        analysis_prefix+'_map-var.nii.gz')
+                nib.save(varmap, varmap_fpath)
+                print('saved var map to ', varmap_fpath)
+                
                 # save report
                 print('saving report')
                 report_fpath = os.path.join(nilearn_sub_dir,

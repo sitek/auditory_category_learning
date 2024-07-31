@@ -226,7 +226,7 @@ def nilearn_glm_per_run(stim_list, task_label, \
                                                 'sub-%s_space-%s'%(model.subject_label, 
                                                                    space_label))
                     nilearn_sub_run_dir = os.path.join(nilearn_sub_dir, 
-                                                       'stimulus_per_run_%s'%model_type, 
+                                                       f'stimulus_per_run_{model_type}', 
                                                        'run%02d'%rx)
 
                     if not os.path.exists(nilearn_sub_run_dir):

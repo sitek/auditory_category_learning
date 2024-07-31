@@ -24,7 +24,7 @@ parser.add_argument("--fwhm", help="spatial smoothing full-width half-max",
                     type=float)
 parser.add_argument("--atlas_label", 
                     help=("name of custom atlas label (options: "
-                          " `subcort_aud`, `carpet_dseg`, `aparc`, `carpet_motor`"), 
+                          " `subcort_aud`, `carpet_dseg`, `aparc`, `tian_s3', `carpet_motor`"), 
                     type=str)
 parser.add_argument("--bidsroot", 
                     help="top-level directory of the BIDS dataset", 

@@ -141,7 +141,7 @@ if 'ToneLearning' in task_id:
                 out_fpath = os.path.join(project_dir,
                                          'data_denoised',
                                          'sub-%s'%subject_id, 'func',
-                                         'sub-%s_task-%s_run-%02d_events.tsv'%(subject_id, bids_task_list[0], run_i))
+                                         'sub-%s_task-%s_run-%02d_acq-dwidenoise_events.tsv'%(subject_id, bids_task_list[0], run_i))
 
                 bids_df.to_csv(out_fpath, sep='\t')
                 print('saved output to ', out_fpath)
@@ -173,7 +173,7 @@ if 'STgrid' in task_id:
             out_fpath = os.path.join(project_dir,
                                      'data_denoised',
                                      'sub-%s'%subject_id, 'func',
-                                     'sub-%s_task-%s_run-%02d_events.tsv'%(subject_id, 
+                                     'sub-%s_task-%s_run-%02d_acq-dwidenoise_events.tsv'%(subject_id, 
                                                                            bids_task_list[1], 
                                                                            rx+1))
 

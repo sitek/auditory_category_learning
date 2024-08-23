@@ -90,7 +90,8 @@ def prep_models_and_args(subject_id=None, task_id=None, fwhm=None, bidsroot=None
                                                                     space_label, [subject_id],
                                                                     smoothing_fwhm=fwhm,
                                                                     derivatives_folder=deriv_dir,
-                                                                    slice_time_ref=slice_time_ref)
+                                                                    slice_time_ref=slice_time_ref,
+                                                                    minimize_memory=False)
 
     # fill n/a with 0
     [[mc.fillna(0, inplace=True) for mc in sublist] for sublist in models_confounds]
@@ -171,52 +172,68 @@ def nilearn_glm_across_runs(stim_list, task_label, models, models_run_imgs, \
                 event = events[rx]
                 confound = confounds_ltd[rx]
 
-                try:
-                    # fit the GLM
-                    print('fitting GLM on ', img)
-                    model.fit(img, event, confound);
+                #try:
+                # fit the GLM
+                print('fitting GLM on ', img)
+                model.fit(img, event, confound);
 
-                    # compute the contrast of interest
-                    print('computing contrast of interest')
-                    summary_statistics = model.compute_contrast(contrast_label, output_type='all')
-                    zmap = summary_statistics['z_score']
-                    statmap = summary_statistics['effect_size']
+                # compute the contrast of interest
+                print('computing contrast of interest')
+                summary_statistics = model.compute_contrast(contrast_label, output_type='all')
+                zmap = summary_statistics['z_score']
+                statmap = summary_statistics['effect_size']
 
-                    # save z map
-                    print('saving z-map')
-                    nilearn_sub_dir = os.path.join(bidsroot, 'derivatives', 'nilearn', 
-                                                   'level-1_fwhm-%.02f'%model.smoothing_fwhm, 
-                                                   'sub-%s_space-%s'%(model.subject_label, space_label),
-                                                   'per_run', 'run%02d'%rx)
-                    if not os.path.exists(nilearn_sub_dir):
-                        os.makedirs(nilearn_sub_dir)
+                # save z map
+                print('saving z-map')
+                nilearn_sub_dir = os.path.join(bidsroot, 'derivatives', 'nilearn', 
+                                               'level-1_fwhm-%.02f'%model.smoothing_fwhm, 
+                                               'sub-%s_space-%s'%(model.subject_label, space_label),
+                                               'per_run', 'run%02d'%rx)
+                if not os.path.exists(nilearn_sub_dir):
+                    os.makedirs(nilearn_sub_dir)
 
-                    analysis_prefix = 'sub-%s_task-%s_fwhm-%.02f_space-%s_contrast-%s'%(model.subject_label,
-                                                                                        task_label, 
-                                                                                        model.smoothing_fwhm,
-                                                                                        space_label, 
-                                                                                        contrast_desc)
-                    zmap_fpath = os.path.join(nilearn_sub_dir,
-                                            analysis_prefix+'_map-zscore.nii.gz')
-                    nib.save(zmap, zmap_fpath)
-                    print('saved z map to ', zmap_fpath)
+                analysis_prefix = 'sub-%s_task-%s_fwhm-%.02f_space-%s_contrast-%s'%(model.subject_label,
+                                                                                    task_label, 
+                                                                                    model.smoothing_fwhm,
+                                                                                    space_label, 
+                                                                                    contrast_desc)
+                zmap_fpath = os.path.join(nilearn_sub_dir,
+                                        analysis_prefix+'_map-zscore.nii.gz')
+                nib.save(zmap, zmap_fpath)
+                print('saved z map to ', zmap_fpath)
 
-                    # also save beta maps
-                    statmap_fpath = os.path.join(nilearn_sub_dir,
-                                                analysis_prefix+'_map-beta.nii.gz')
-                    nib.save(statmap, statmap_fpath)
-                    print('saved beta map to ', statmap_fpath)
+                # also save beta maps
+                statmap_fpath = os.path.join(nilearn_sub_dir,
+                                            analysis_prefix+'_map-beta.nii.gz')
+                nib.save(statmap, statmap_fpath)
+                print('saved beta map to ', statmap_fpath)
 
-                    # save report
-                    print('saving report')
-                    report_fpath = os.path.join(nilearn_sub_dir,
-                                                analysis_prefix+'_report.html')
-                    report = make_glm_report(model=model,
-                                            contrasts=contrast_label)
-                    report.save_as_html(report_fpath)
-                    print('saved report to ', report_fpath)
-                except:
-                    print('could not run for ', contrast_label)
+                # save report
+                print('saving report')
+                report_fpath = os.path.join(nilearn_sub_dir,
+                                            analysis_prefix+'_report.html')
+                report = make_glm_report(model=model,
+                                        contrasts=contrast_label)
+                report.save_as_html(report_fpath)
+                print('saved report to ', report_fpath)
+
+                # TEST: save to BIDS derivatives
+                from nilearn.interfaces.bids import save_glm_to_bids
+                bidsderiv_sub_dir = os.path.join(bidsroot, 'derivatives', 'nilearn', 
+                                               'bids-deriv_level-1_fwhm-%.02f'%model.smoothing_fwhm, 
+                                               'sub-%s_space-%s'%(model.subject_label, space_label),
+                                               'per_run', 'run%02d'%rx)
+                if not os.path.exists(bidsderiv_sub_dir):
+                    os.makedirs(bidsderiv_sub_dir)
+                    
+                save_glm_to_bids(model, 
+                                 contrast_label,
+                                 out_dir=bidsderiv_sub_dir,
+                                 prefix=f"{model.subject_label}_run-{rx}_task-{task_label}_fwhm-{model.smoothing_fwhm}",
+                                )
+                    
+                #except:
+                #    print('could not run for ', contrast_label)
     return zmap_fpath, statmap_fpath, contrast_label
 
 ''' run the pipeline '''

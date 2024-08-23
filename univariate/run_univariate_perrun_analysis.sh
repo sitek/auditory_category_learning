@@ -8,5 +8,5 @@ python univariate_perrun_analysis.py --sub=$1 \
                               --fwhm=3 \
                               --event_type=sound \
                               --t_acq=2 --t_r=3 \
-                              --bidsroot=/bgfs/bchandrasekaran/krs228/data/FLT/data_bids_noIntendedFor/ \
-                              --fmriprep_dir=/bgfs/bchandrasekaran/krs228/data/FLT/derivatives/fmriprep_noSDC/
+                              --bidsroot=/bgfs/bchandrasekaran/krs228/data/FLT/data_denoised/ \
+                              --fmriprep_dir=/bgfs/bchandrasekaran/krs228/data/FLT/data_denoised/derivatives/denoised_fmriprep-22.1.1/

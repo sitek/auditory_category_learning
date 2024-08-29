@@ -288,7 +288,7 @@ def nilearn_glm_per_run(stim_list, task_label, \
                     save_glm_to_bids(model, 
                                      contrast_label,
                                      out_dir=bidsderiv_sub_dir,
-                                     prefix=f"{model.subject_label}_run-{rx}_task-{task_label}_fwhm-{model.smoothing_fwhm}",
+                                     prefix=f"sub-{model.subject_label}_run-{rx}_task-{task_label}_fwhm-{model.smoothing_fwhm}",
                                     )
 
                 except:

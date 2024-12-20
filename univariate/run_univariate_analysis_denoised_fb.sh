@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --time=6:00:00
+#SBATCH --time=12:00:00
 
 python univariate_analysis_fb-correct-vs-wrong.py --sub=$1 \
                               --task=tonecat \

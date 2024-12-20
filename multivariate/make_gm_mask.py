@@ -46,16 +46,14 @@ def generate_mask(subject_id, fmriprep_dir, statmap_example_fpath, out_dir, spac
                             'sub-{}/anat'.format(subject_id))
 
     # create binarized gray matter mask
-    gm_fpath = os.path.join(anat_dir, 'sub-{}_space-{}_label-GM_probseg.nii.gz'.format(subject_id, space_label))
+    gm_fpath = os.path.join(anat_dir, f'sub-{subject_id}_space-{space_label}_label-GM_probseg.nii.gz')
     gm_img = nib.load(gm_fpath)
     
     from nilearn.image import binarize_img
-    #gm_bin_img = binarize_img(gm_img, threshold=0.9)
     gm_bin_img = binarize_img(gm_img, threshold=0)
-
     mask_func_img = resample_to_img(gm_bin_img, statmap_example_fpath, interpolation='nearest')
     
-    labelname = 'gm' # 'gm-thr90'
+    labelname = 'gm'
     out_fpath = os.path.join(out_dir, 'sub-%s_space-%s_mask-%s.nii.gz'%(subject_id, space_label, labelname))
     nib.save(mask_func_img, out_fpath)
     

@@ -178,11 +178,14 @@ def prep_models_and_args(subject_id=None, task_label=None, fwhm=None, bidsroot=N
 
 
 # transform full event design matrix (LSA) into single-event only (LSS)
-def lss_transformer(event_df, event_name):
-    other_idx = np.array(event_df.loc[:,'trial_type'] != event_name)
-    lss_event_df = event_df.copy()
-    lss_event_df.loc[other_idx, 'trial_type'] = 'other_events' 
-    return lss_event_df
+def lss_transformer(event_df_list, event_name):
+    lss_event_df_list = []
+    for event_df in event_df_list:
+        other_idx = np.array(event_df.loc[:,'trial_type'] != event_name)
+        lss_event_df = event_df.copy()
+        lss_event_df.loc[other_idx, 'trial_type'] = 'other_events' 
+        lss_event_df_list.append(lss_event_df)
+    return lss_event_df_list
 
 # ### Run-by-run GLM fit
 def nilearn_glm_per_run(stim_list, task_label, \
@@ -191,6 +194,11 @@ def nilearn_glm_per_run(stim_list, task_label, \
                         models_events, models_confounds, \
                         conf_keep_list, space_label):
     from nilearn.reporting import make_glm_report
+    
+    # create run grouping dictionary
+    run_group_dict = {'earlythird': [0, 1],
+                      'middlethird': [2, 3],
+                      'latethird': [4, 5]}
     
     # for each model (corresponding to a subject)
     for midx in range(len(models)):
@@ -204,6 +212,9 @@ def nilearn_glm_per_run(stim_list, task_label, \
             print('running GLM with stimulus ', stim)
 
             model = models[midx]
+            imgs = models_run_imgs[midx]
+            events = models_events[midx]
+            confounds = models_confounds[midx]
 
             print(model.subject_label)
 
@@ -212,20 +223,22 @@ def nilearn_glm_per_run(stim_list, task_label, \
             confounds_ltd = [models_confounds[midx][cx][conf_keep_list] for cx in range(len(models_confounds[midx]))]
 
             # for each run
-            for rx in range(len(confounds_ltd)):
-                img = models_run_imgs[midx][rx]
-                confound = confounds_ltd[rx]
-                
+            for run_group in run_group_dict:
+                imgs_grouped = [imgs[x] for x in run_group_dict[run_group]]
+                events_grouped = [events[x] for x in run_group_dict[run_group]]
+                confounds_grouped = [confounds_ltd[x] for x in run_group_dict[run_group]]
+
                 if model_type == 'LSA':
-                    event = models_events[midx][rx]
+                    event = events_grouped
                 elif model_type == 'LSS':
-                    event = lss_transformer(models_events[midx][rx], stim)
-                print('events being modeled: ', sorted(event.trial_type.unique()))
+                    event = lss_transformer(events_grouped, stim)
+                #print('events being modeled: ', sorted(event.trial_type.unique()))
 
                 try:
+                
                     # fit the GLM
-                    print('fitting GLM on ', img)
-                    model.fit(img, event, confound);
+                    print('fitting GLM on ', run_group)
+                    model.fit(imgs_grouped, event, confounds_grouped);
 
                     # compute the contrast of interest
                     print('computing contrast of interest', 
@@ -239,25 +252,26 @@ def nilearn_glm_per_run(stim_list, task_label, \
 
                     # save stat maps
                     print('saving stat maps')
-                    
+
                     from nilearn.interfaces.bids import save_glm_to_bids
                     bidsderiv_sub_dir = os.path.join(bidsroot, 'derivatives', 'nilearn', 
                                                      'bids-deriv_level-1_fwhm-%.02f'%model.smoothing_fwhm, 
                                                      f'sub-{model.subject_label}_space-{space_label}',
-                                                     f'per_run_{model_type}_event-{event_type}', 
-                                                     'run%02d'%rx)
+                                                     f'grouped-runs_{model_type}_event-{event_type}', 
+                                                     run_group)
                     if not os.path.exists(bidsderiv_sub_dir):
                         os.makedirs(bidsderiv_sub_dir)
 
+                    out_pref = f"sub-{model.subject_label}_run-group-{run_group}_task-{task_label}_fwhm-{model.smoothing_fwhm}"
                     save_glm_to_bids(model, 
                                      contrast_label,
                                      out_dir=bidsderiv_sub_dir,
-                                     prefix=f"sub-{model.subject_label}_run-{rx}_task-{task_label}_fwhm-{model.smoothing_fwhm}",
+                                     prefix=out_pref,
                                     )
                     print(f'Saved model outputs to {bidsderiv_sub_dir}')
 
                 except:
-                    print('could not run for ', img, ' with ', contrast_label)
+                    print(f'could not run for {run_group} with {contrast_label}')
           
 ''' Multivariate analysis: across-run GLM '''
 print('running with subject ', subject_id)

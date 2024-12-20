@@ -38,7 +38,7 @@ parser.add_argument("--sub", help="participant id",
 parser.add_argument("--space", help="space label", 
                     type=str)
 parser.add_argument("--analysis_window", 
-                    help="analysis window (options: session, run}", 
+                    help="analysis window (options: session, rungroup, run}", 
                     type=str)
 parser.add_argument("--fwhm", help="spatial smoothing full-width half-max", 
                     type=str)
@@ -75,7 +75,7 @@ fmriprep_dir = args.fmriprep_dir
 # other directory definitions
 deriv_dir = os.path.join(bidsroot, 'derivatives')
 model_dir = os.path.join(deriv_dir, 'nilearn', 
-                         'level-1_fwhm-{}'.format(fwhm))
+                         'bids-deriv_level-1_fwhm-{}'.format(fwhm))
 
 print('participant ID: ', sub_id, 
       space_label, 
@@ -190,54 +190,7 @@ for dx, descrip in enumerate(model_rdms.rdm_descriptors['stimulus_model']):
                             model_rdms.subset('stimulus_model', descrip))
     stim_models.append(spec_model)
 '''
-
-# ### FFR RDMs
-ffr_models = []
-'''
-ffr_strategy = 'group'
-if ffr_strategy == 'group':
-    # start with grand average FFR
-    print('loading FFR dissimilarity matrix')
-    ffr_rdm_fpath = os.path.join(stim_rdm_dir, 'FFRdistancesgrandavg.csv')
-    rdm_name = 'FFR_grandavg'
-    ffr_rdm_data = np.genfromtxt(ffr_rdm_fpath, delimiter=',', skip_header=1)
-    print(len(ffr_rdm_data))
-    
-elif ffr_strategy == 'participant':
-    # get participant-specific FFR distances
-    participants_fpath = os.path.join(bidsroot, 'participants.tsv')
-    participants_df = pd.read_csv(participants_fpath, sep='\t', dtype=str)
-
-    # subjects to ignore (not fully processed, etc.)
-    ignore_subs = []
-    participants_df.drop(participants_df[participants_df.participant_id.isin(ignore_subs)].index,
-                         inplace=True)
-
-    # re-sort by participant ID
-    participants_df.sort_values(by=['participant_id'], 
-                                ignore_index=True, 
-                                inplace=True)
-    
-    # get the FFR ID for the current participant ID
-    ffr_id = participants_df.loc[participants_df['participant_id']=='sub-'+sub_id].FFR_id.item()
-    
-    ffr_rdm_fname = 'FFRdistances_{}_Man.csv'.format(ffr_id)
-    ffr_rdm_fpath = os.path.join(stim_rdm_dir, ffr_rdm_fname)
-    rdm_name = 'FFR_participant'
-    ffr_rdm_data = np.genfromtxt(ffr_rdm_fpath, delimiter=',', skip_header=1)
-    print(len(ffr_rdm_data))
-
-# input array needs to be 3-dimensional, despite docs saying 2-D is ok
-# (thus the newaxis)
-ffr_rdm = RDMs(ffr_rdm_data[np.newaxis,:,:],
-               rdm_descriptors={'FFR model': rdm_name},
-               pattern_descriptors=pattern_descriptors,
-               dissimilarity_measure='Euclidean')
-ffr_model = ModelFixed('FFR_participant model', ffr_rdm)
-
-ffr_models = [ffr_model]
-'''
-    
+   
 # ### Categorical RDMs
 
 # make categorical RDMs
@@ -352,7 +305,59 @@ if analysis_window == 'session':
         out_fpath = os.path.join(out_dir, sub_outname)
         nib.save(plot_img, out_fpath)
         print('saved image to ', out_fpath)
+
+elif analysis_window == 'rungroup':
+    model_desc = 'grouped-runs_LSS'
+    # set this path to wherever you saved the folder containing the img-files
+    sub_model_folder = os.path.join(model_dir, 
+                               f'sub-{sub_id}_space-{space_label}',
+                               f'{model_desc}_event-stimulus')
+    print(sub_model_folder)
+    
+    run_group_dict = {'earlythird' : [0, 1],
+                      'middlethird': [2, 3],
+                      'latethird'  : [4, 5]}
+    
+    #for rx, run_label in enumerate(run_labels):
+    for run_group in run_group_dict:
+        # set this path to wherever you saved the folder containing the img-files
+        data_folder = os.path.join(sub_model_folder, run_group)
         
+        print(f'creating searchlight RDMs for run-group-{run_group}')
+        print(f'looking for files in {data_folder}')
+        image_paths = sorted(glob(f'{data_folder}/*contrast-{contrast_label}*stat-t_statmap.nii.gz'))
+        assert len(image_paths)
+        print(image_paths)
+
+        SL_RDM, data = get_searchlight_rdm(mask_data, image_paths, centers, neighbors)
+
+        # define output path
+        out_dir = os.path.join(model_dir, 
+                               f'sub-{sub_id}_space-{space_label}',
+                               'rsa-searchlight_fwhm-{}_searchvox-{}_{}'.format(fwhm, searchrad, model_desc),
+                               model_desc, f'run-group-{run_group}')
+        if not os.path.exists(out_dir):
+                os.makedirs(out_dir)
+
+        # ## Compare RDMs
+        for mi, test_model in enumerate(all_models): # cat_models
+            plot_img = create_RDM_img(test_model, SL_RDM, data, mask_img)
+
+            model_id = test_model.name.split(' ')[0]
+
+            # #### Save correlation image
+            sub_outname = 'sub-{}_run-group-{}_fwhm-{}_' \
+                          'searchvox-{}_rsa-searchlight_'\
+                          'contrast-{}_model-{}.nii.gz'.format(sub_id, 
+                                                              run_group,
+                                                              fwhm,
+                                                              searchrad,
+                                                              contrast_label,
+                                                              model_id)
+            out_fpath = os.path.join(out_dir, sub_outname)
+            nib.save(plot_img, out_fpath)
+            print('saved image to ', out_fpath)
+
 elif analysis_window == 'run':
     model_desc = 'stimulus_per_run_LSS'
     # set this path to wherever you saved the folder containing the img-files
@@ -375,7 +380,7 @@ elif analysis_window == 'run':
 
         # define output path
         out_dir = os.path.join(model_dir, 
-                               'sub-{}_space-{}'.format(sub_id, space_label),
+                               f'sub-{sub_id}_space-{space_label}',
                                'rsa-searchlight_fwhm-{}_searchvox-{}_{}'.format(fwhm, searchrad, model_desc),
                                run_label, )
         if not os.path.exists(out_dir):

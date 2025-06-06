@@ -47,108 +47,108 @@ if 'ToneLearning' in task_id:
 
     run_i = 1
     for rx, filename in enumerate(file_list):
-        try:
-            print('converting ', filename)
-            fpath = os.path.join(behav_dir, filename)
-            df = pd.read_csv(fpath)
+        #try:
+        print('converting ', filename)
+        fpath = os.path.join(behav_dir, filename)
+        df = pd.read_csv(fpath)
 
-            # create a temp dataframe of only trials where sounds were presented
-            trial_df = df[df.corrAns>0]
+        # create a temp dataframe of only trials where sounds were presented
+        trial_df = df[df.corrAns>0]
 
-            if len(trial_df)<30:
-                print('too few trials – incomplete run. Skipping')
-            else:
-                ''' Stimulus dataframe '''
-                # set up stimulus dataframe
-                stim_df = pd.DataFrame(columns=['onset', 
-                                                'duration', 
-                                                'trial_type',
-                                                'stim_file'])
+        if len(trial_df)<30:
+            print('too few trials – incomplete run. Skipping')
+        else:
+            ''' Stimulus dataframe '''
+            # set up stimulus dataframe
+            stim_df = pd.DataFrame(columns=['onset', 
+                                            'duration', 
+                                            'trial_type',
+                                            'stim_file'])
 
-                # define onset time (relative to the first stimulus presentation)
-                stim_df.onset = trial_df['sound_1.started'] - \
-                                (trial_df['sound_1.started'].iloc[0]-first_stim_delay)
+            # define onset time (relative to the first stimulus presentation)
+            stim_df.onset = trial_df['sound_1.started'] - \
+                            (trial_df['sound_1.started'].iloc[0]-first_stim_delay)
 
-                # define duration
-                stim_df.duration = 0.3
+            # define duration
+            stim_df.duration = 0.3
 
-                # define stimulus type (based on sound file – HARDCODED)
-                stim_df.trial_type = 'sound_'+trial_df.soundfile.str[8:14]
+            # define stimulus type (based on sound file – HARDCODED)
+            stim_df.trial_type = 'sound_'+trial_df.soundfile.str[8:14]
 
-                # define stimulus soundfile
-                stim_df.stim_file = trial_df.soundfile
+            # define stimulus soundfile
+            stim_df.stim_file = trial_df.soundfile
 
-                ''' Response dataframe '''
-                # set up response dataframe
-                resp_df = pd.DataFrame(columns=['onset', 
-                                                'duration',
-                                                'response_time', 
-                                                'correct_key',
-                                                'trial_type'])
+            ''' Response dataframe '''
+            # set up response dataframe
+            resp_df = pd.DataFrame(columns=['onset', 
+                                            'duration',
+                                            'response_time', 
+                                            'correct_key',
+                                            'trial_type'])
 
-                # define onset time (relative to the first stimulus presentation)
-                resp_df.onset = trial_df['sound_1.started'] + \
-                                trial_df['key_resp.rt']  - \
-                                (trial_df['sound_1.started'].iloc[0]-first_stim_delay)
+            # define onset time (relative to the first stimulus presentation)
+            resp_df.onset = trial_df['sound_1.started'] + \
+                            trial_df['key_resp.rt']  - \
+                            (trial_df['sound_1.started'].iloc[0]-first_stim_delay)
 
-                # define duration (arbitrary)
-                resp_df.duration = 0.5
+            # define duration (arbitrary)
+            resp_df.duration = 0.5
 
-                resp_df.response_time = trial_df['key_resp.rt']        
-                resp_df.correct_key = trial_df['corrAns']
-                resp_df.trial_type = 'resp_'+trial_df['key_resp.keys']
+            resp_df.response_time = trial_df['key_resp.rt']        
+            resp_df.correct_key = trial_df['corrAns']
+            resp_df.trial_type = 'resp_'+trial_df['key_resp.keys'].astype(str)
 
-                ''' Feedback dataframe '''
-                # set up feedback dataframe
-                fb_df = pd.DataFrame(columns=['onset',
-                                                'duration', 
-                                                'trial_type'])        
+            ''' Feedback dataframe '''
+            # set up feedback dataframe
+            fb_df = pd.DataFrame(columns=['onset',
+                                            'duration', 
+                                            'trial_type'])        
 
-                # define onset time (relative to the first stimulus presentation)
-                fb_df.onset = trial_df['text_2.started'] - \
-                              (trial_df['sound_1.started'].iloc[0]-first_stim_delay)
+            # define onset time (relative to the first stimulus presentation)
+            fb_df.onset = trial_df['text_2.started'] - \
+                          (trial_df['sound_1.started'].iloc[0]-first_stim_delay)
 
-                # feedback is visible from the onset of text_2 to the onset of jitter_cross_post_fb
-                fb_df.duration = trial_df['jitter_cross_post_fb.started'] - \
-                                 trial_df['text_2.started']
+            # feedback is visible from the onset of text_2 to the onset of jitter_cross_post_fb
+            fb_df.duration = trial_df['jitter_cross_post_fb.started'] - \
+                             trial_df['text_2.started']
 
-                # define feedback presented
-                # TO DO: UPDATE TO NOT INCLUDE NULL TRIALS IN FB_WRONG
-                #fb_df['trial_type'] = np.where(trial_df['key_resp.corr']==1, 'fb_correct', 
-                #                                (np.where(trial_df.corrAns==0, 'none', 'fb_wrong')))
-                cond_list = [trial_df['key_resp.corr']==1, # correct response
-                             trial_df['key_resp.keys']=='None', # no response
-                             trial_df.corrAns==0, # null stimulus
-                             trial_df['key_resp.corr']==0 # wrong response (must be after no response cond)
-                            ]
-                choice_list = ['fb_correct',
-                               'fb_noresp',
-                               'fb_none',
-                               'fb_wrong'
-                              ]
-                
-                fb_df['trial_type'] = np.select(cond_list, 
-                                                choice_list,
-                                                'none')
+            # define feedback presented
+            # TO DO: UPDATE TO NOT INCLUDE NULL TRIALS IN FB_WRONG
+            #fb_df['trial_type'] = np.where(trial_df['key_resp.corr']==1, 'fb_correct', 
+            #                                (np.where(trial_df.corrAns==0, 'none', 'fb_wrong')))
+            cond_list = [trial_df['key_resp.corr']==1, # correct response
+                         trial_df['key_resp.keys']=='None', # no response
+                         trial_df.corrAns==0, # null stimulus
+                         trial_df['key_resp.corr']==0 # wrong response (must be after no response cond)
+                        ]
+            choice_list = ['fb_correct',
+                           'fb_noresp',
+                           'fb_none',
+                           'fb_wrong'
+                          ]
 
-                ''' combine all three dataframes '''
-                bids_df = pd.concat([stim_df, resp_df, fb_df], 
-                                    axis=0, join='outer', ignore_index=True)
-                bids_df.sort_values(by=['onset'], ignore_index=True,
-                                    inplace=True)
+            fb_df['trial_type'] = np.select(cond_list, 
+                                            choice_list,
+                                            'none')
 
-                # save to output path
-                out_fpath = os.path.join(project_dir,
-                                         'data_denoised',
-                                         'sub-%s'%subject_id, 'func',
-                                         'sub-%s_task-%s_run-%02d_acq-dwidenoise_events.tsv'%(subject_id, bids_task_list[0], run_i))
+            ''' combine all three dataframes '''
+            bids_df = pd.concat([stim_df, resp_df, fb_df], 
+                                axis=0, join='outer', ignore_index=True)
+            bids_df.sort_values(by=['onset'], ignore_index=True,
+                                inplace=True)
 
-                bids_df.to_csv(out_fpath, sep='\t')
-                print('saved output to ', out_fpath)
-                run_i += 1
-        except:
-            print('could not process this csv file')
-            pass
+            # save to output path
+            out_fpath = os.path.join(project_dir,
+                                     'data_denoised',
+                                     'sub-%s'%subject_id, 'func',
+                                     'sub-%s_task-%s_run-%02d_acq-dwidenoise_events.tsv'%(subject_id, bids_task_list[0], run_i))
+
+            bids_df.to_csv(out_fpath, sep='\t')
+            print('saved output to ', out_fpath)
+            run_i += 1
+        #except:
+        #    print('could not process this csv file')
+        #    pass
 
 
 ''' Spectrotemporal grid stimulus task '''

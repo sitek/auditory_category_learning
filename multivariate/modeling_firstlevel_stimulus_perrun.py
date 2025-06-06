@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import nibabel as nib
 
 from glob import glob
-from nilearn import plotting
+from nilearn.glm.first_level import first_level_from_bids
 
 ''' Set up and interpret command line arguments '''
 parser = argparse.ArgumentParser(
@@ -69,54 +69,28 @@ t_r = args.t_r
 bidsroot = args.bidsroot
 fmriprep_dir = args.fmriprep_dir
 
+# correct the fmriprep-given slice reference (middle slice, or 0.5)
+# to account for sparse acquisition (silent gap during auditory presentation paradigm)
+# fmriprep is explicitly based on slice timings, while nilearn is based on t_r
+# and since images are only collected during a portion of the overall t_r 
+# (which includes the silent gap),
+# we need to account for this
+slice_time_ref = 0.5 * t_acq / t_r
+    
 ''' ## nilearn modeling: first level '''
 # based on: https://nilearn.github.io/auto_examples/04_glm_first_level/plot_bids_features.html
 # #sphx-glr-auto-examples-04-glm-first-level-plot-bids-features-py
 
-def prep_models_and_args(subject_id=None, task_label=None, fwhm=None, bidsroot=None, 
-                         deriv_dir=None, event_type=None, t_r=None, t_acq=None, space_label='T1w'):
-    from nilearn.glm.first_level import first_level_from_bids
-    # correct the fmriprep-given slice reference (middle slice, or 0.5)
-    # to account for sparse acquisition (silent gap during auditory presentation paradigm)
-    # fmriprep is explicitly based on slice timings, while nilearn is based on t_r
-    # and since images are only collected during a portion of the overall t_r 
-    # (which includes the silent gap),
-    # we need to account for this
-    slice_time_ref = 0.5 * t_acq / t_r
-
-    print(bidsroot, task_label, space_label)
-
-    models, models_run_imgs, \
-            models_events, \
-            models_confounds = first_level_from_bids(bidsroot, 
-                                                     task_label, 
-                                                     space_label,
-                                                     [subject_id],
-                                                     smoothing_fwhm=fwhm,
-                                                     derivatives_folder=deriv_dir,
-                                                     slice_time_ref=slice_time_ref,
-                                                     minimize_memory=False)
-
-    # fill n/a with 0
-    [[mc.fillna(0, inplace=True) for mc in sublist] for sublist in models_confounds]
-
-    # define which confounds to keep as nuisance regressors
-    conf_keep_list = ['framewise_displacement',
-                    #'a_comp_cor_00', 'a_comp_cor_01', 
-                    #'a_comp_cor_02', 'a_comp_cor_03', 
-                    #'a_comp_cor_04', 'a_comp_cor_05', 
-                    #'a_comp_cor_06', 'a_comp_cor_07', 
-                    #'a_comp_cor_08', 'a_comp_cor_09', 
-                    'trans_x', 'trans_y', 'trans_z', 
-                    'rot_x','rot_y', 'rot_z']
-
+def update_events(models_events, event_type='sound'):
     ''' create events '''
     # stimulus events
     if event_type == 'stimulus':
         for sx, sub_events in enumerate(models_events):
-            print(models[sx].subject_label)
             for mx, run_events in enumerate(sub_events):
                 run_events['trial_type'] = run_events['trial_type'].str.replace('-','_')
+
+                # remove NaNs
+                run_events.dropna(subset=['onset'], inplace=True)
 
         # create stimulus list from updated events.tsv file
         stim_list = sorted([s for s in run_events['trial_type'].unique() if str(s) != 'nan'])
@@ -124,7 +98,6 @@ def prep_models_and_args(subject_id=None, task_label=None, fwhm=None, bidsroot=N
     # trial-specific events
     if event_type == 'trial':
         for sx, sub_events in enumerate(models_events):
-            print(models[sx].subject_label)
             for mx, run_events in enumerate(sub_events):
 
                 name_groups = run_events.groupby('trial_type')['trial_type']
@@ -134,6 +107,9 @@ def prep_models_and_args(subject_id=None, task_label=None, fwhm=None, bidsroot=N
                 run_events['trial_type'] = run_events['trial_type'] + \
                                                     '_trial' + suffix.map(str)
                 run_events['trial_type'] = run_events['trial_type'].str.replace('-','_')
+                
+                # remove NaNs
+                run_events.dropna(subset=['onset'], inplace=True)
 
         # create stimulus list from updated events.tsv file
         stim_list = sorted([s for s in run_events['trial_type'].unique() if str(s) != 'nan'])
@@ -141,13 +117,15 @@ def prep_models_and_args(subject_id=None, task_label=None, fwhm=None, bidsroot=N
     # all sound events
     if event_type == 'sound':
         for sx, sub_events in enumerate(models_events):
-            print(models[sx].subject_label)
             for mx, run_events in enumerate(sub_events):
                 orig_stim_list = sorted([str(s) for s in run_events['trial_type'].unique() if str(s) not in ['nan', 'None']])
                 print('original stim list: ', orig_stim_list)
 
                 run_events['trial_type'] = run_events.trial_type.str.split('_', 
                                                                            expand=True)[0]
+
+                # remove NaNs
+                run_events.dropna(subset=['onset'], inplace=True)
 
         # create stimulus list from updated events.tsv file
         stim_list = sorted([str(s) for s in run_events['trial_type'].unique() if str(s) not in ['nan', 'None']])
@@ -163,6 +141,10 @@ def prep_models_and_args(subject_id=None, task_label=None, fwhm=None, bidsroot=N
                 print('original stim list: ', orig_stim_list)
 
                 run_events = run_events[run_events.trial_type.str.contains('resp_', regex=False)]
+                                
+                # remove NaNs
+                run_events.dropna(subset=['onset'], inplace=True)
+
                 #print(run_events)
                 new_models_events.append(run_events)
 
@@ -173,8 +155,7 @@ def prep_models_and_args(subject_id=None, task_label=None, fwhm=None, bidsroot=N
         # put new events into existing structure
         models_events = [new_models_events]
 
-    #model_and_args = zip(models, models_run_imgs, models_events, models_confounds)
-    return stim_list, models, models_run_imgs, models_events, models_confounds, conf_keep_list
+    return stim_list, models_events
 
 
 # transform full event design matrix (LSA) into single-event only (LSS)
@@ -185,94 +166,90 @@ def lss_transformer(event_df, event_name):
     return lss_event_df
 
 # ### Run-by-run GLM fit
-def nilearn_glm_per_run(stim_list, task_label, \
-                        event_filter, model_type, \
-                        models, models_run_imgs, \
-                        models_events, models_confounds, \
-                        conf_keep_list, space_label):
-    from nilearn.reporting import make_glm_report
+def nilearn_glm_per_run(stim_list, task_label,
+                        event_filter,
+                        models, models_run_imgs,
+                        models_events, models_confounds,
+                        space_label,
+                        model_type='LSA'):
+    from nilearn.interfaces.bids import save_glm_to_bids
+    from nilearn.interfaces.fmriprep import load_confounds_strategy
     
-    # for each model (corresponding to a subject)
-    for midx in range(len(models)):
-        stim_contrast_list = []
-        for sx, stim in enumerate(stim_list):
-            contrast_label = stim
-            contrast_desc  = stim
-            
-            #if event_filter in stim: run on only sound events
-            #if event_filter not in stim: # run on non-sound events
-            print('running GLM with stimulus ', stim)
+    midx = 0 # only 1 subject per analysis
+    model = models[midx]
 
-            model = models[midx]
+    # set limited confounds
+    print('selecting confounds')
+    imgs = models_run_imgs[midx]
+    confounds_ltd, sample_mask = load_confounds_strategy(img_files=imgs, 
+                                                         denoise_strategy='compcor')
+    
+    for contrast_label in stim_list:
+        if event_filter not in contrast_label:
+            continue
+        else:
+            print('running GLM with stimulus ', contrast_label)
 
-            print(model.subject_label)
+        # for each run
+        for rx, img in enumerate(imgs):
+            confound = confounds_ltd[rx]
 
-            # set limited confounds
-            print('selecting confounds')
-            confounds_ltd = [models_confounds[midx][cx][conf_keep_list] for cx in range(len(models_confounds[midx]))]
+            if model_type == 'LSA':
+                event = models_events[midx][rx]
+            elif model_type == 'LSS':
+                event = lss_transformer(models_events[midx][rx], contrast_label)
 
-            # for each run
-            for rx in range(len(confounds_ltd)):
-                img = models_run_imgs[midx][rx]
-                confound = confounds_ltd[rx]
-                
-                if model_type == 'LSA':
-                    event = models_events[midx][rx]
-                elif model_type == 'LSS':
-                    event = lss_transformer(models_events[midx][rx], stim)
-                print('events being modeled: ', sorted(event.trial_type.unique()))
+            #try:
+            # fit the GLM
+            print('fitting GLM on ', img)
+            model.fit(img, event, confound);
 
-                try:
-                    # fit the GLM
-                    print('fitting GLM on ', img)
-                    model.fit(img, event, confound);
+            # save stat maps
+            print('saving stat maps')
 
-                    # compute the contrast of interest
-                    print('computing contrast of interest', 
-                          ' with contrast label = ', contrast_label)
-                    summary_statistics = model.compute_contrast(contrast_label, 
-                                                                output_type='all')
-                    zmap = summary_statistics['z_score']
-                    tmap = summary_statistics['stat']
-                    statmap = summary_statistics['effect_size']
-                    varmap = summary_statistics['effect_variance']
+            from nilearn.interfaces.bids import save_glm_to_bids
+            bidsderiv_sub_dir = os.path.join(bidsroot, 'derivatives', 'nilearn', 
+                                             f'bids-deriv_level-1_fwhm-{model.smoothing_fwhm:.02f}', 
+                                             f'sub-{model.subject_label}_space-{space_label}',
+                                             f'per_run_{model_type}_confound-compcor_event-{event_type}', 
+                                             f'run{rx:02}')
+            if not os.path.exists(bidsderiv_sub_dir):
+                os.makedirs(bidsderiv_sub_dir)
 
-                    # save stat maps
-                    print('saving stat maps')
-                    
-                    from nilearn.interfaces.bids import save_glm_to_bids
-                    bidsderiv_sub_dir = os.path.join(bidsroot, 'derivatives', 'nilearn', 
-                                                     'bids-deriv_level-1_fwhm-%.02f'%model.smoothing_fwhm, 
-                                                     f'sub-{model.subject_label}_space-{space_label}',
-                                                     f'per_run_{model_type}_event-{event_type}', 
-                                                     'run%02d'%rx)
-                    if not os.path.exists(bidsderiv_sub_dir):
-                        os.makedirs(bidsderiv_sub_dir)
+            out_prefix = f"sub-{model.subject_label}_run-{rx}_task-{task_label}_fwhm-{model.smoothing_fwhm}"
+            save_glm_to_bids(model, 
+                             contrast_label,
+                             out_dir=bidsderiv_sub_dir,
+                             prefix=out_prefix,
+                            )
+            print(f'Saved model outputs to {bidsderiv_sub_dir}')
 
-                    save_glm_to_bids(model, 
-                                     contrast_label,
-                                     out_dir=bidsderiv_sub_dir,
-                                     prefix=f"sub-{model.subject_label}_run-{rx}_task-{task_label}_fwhm-{model.smoothing_fwhm}",
-                                    )
-                    print(f'Saved model outputs to {bidsderiv_sub_dir}')
-
-                except:
-                    print('could not run for ', img, ' with ', contrast_label)
+            #except:
+            #    print('could not run for ', img, ' with ', contrast_label)
           
 ''' Multivariate analysis: across-run GLM '''
 print('running with subject ', subject_id)
 #event_type = 'stimulus'
-event_filter = '' # 'sound'
+event_filter = 'sound' # 'sound'
         
-stim_list, models, models_run_imgs, \
-    models_events, models_confounds, \
-    conf_keep_list = prep_models_and_args(subject_id, task_label, fwhm, bidsroot, 
-                                          fmriprep_dir, event_type, t_r, t_acq, 
-                                          space_label=space_label)
-print('stim list: ', stim_list)
+models, models_run_imgs, \
+        models_events, \
+        models_confounds = first_level_from_bids(bidsroot, 
+                                                 task_label, 
+                                                 space_label,
+                                                 [subject_id],
+                                                 smoothing_fwhm=fwhm,
+                                                 derivatives_folder=fmriprep_dir,
+                                                 slice_time_ref=None, #slice_time_ref,
+                                                 minimize_memory=False)
 
-statmap_fpath, contrast_label = nilearn_glm_per_run(stim_list, task_label, 
-                                                    event_filter, model_type,
-                                                    models, models_run_imgs, 
-                                                    models_events, models_confounds, 
-                                                    conf_keep_list, space_label=space_label)
+stim_list, models_events = update_events(models_events, 
+                                         event_type=event_type)
+print('stim_list:', stim_list)
+
+nilearn_glm_per_run(stim_list, task_label, 
+                    event_filter, 
+                    models, models_run_imgs, 
+                    models_events, models_confounds, 
+                    space_label=space_label,
+                    model_type=model_type)

@@ -117,6 +117,38 @@ def get_searchlight_rdm(mask_data, image_paths, centers, neighbors):
     
     return SL_RDM, data
 
+def flag_outlier_conditions(rdm, n_sd=3):
+    """Flag condition indices whose mean dissimilarity is >n_sd SDs from
+    the across-condition mean (i.e. a row/col that looks nothing like the rest).
+
+    Args:
+        rdm: single rsatoolbox RDMs object (one ROI/run)
+        n_sd: z-score threshold
+
+    Returns:
+        1D array of flagged condition (pattern) indices
+    """
+    mat = rdm.get_matrices()[0]
+    row_means = np.nanmean(mat, axis=0)
+    z = (row_means - np.nanmean(row_means)) / np.nanstd(row_means)
+    return np.where(np.abs(z) > n_sd)[0]
+
+def mask_outlier_conditions(rdm, outlier_idx):
+    """Set the row+col for each flagged condition index to NaN, preserving
+    the RDM's shape (needed so rdms.concat() and the final pattern_descriptors
+    assignment still work across ROIs/runs with different flagged conditions).
+    """
+    if len(outlier_idx) == 0:
+        return rdm
+    mat = rdm.get_matrices()
+    mat[:, outlier_idx, :] = np.nan
+    mat[:, :, outlier_idx] = np.nan
+    return RDMs(mat,
+                dissimilarity_measure=rdm.dissimilarity_measure,
+                descriptors=rdm.descriptors,
+                rdm_descriptors=rdm.rdm_descriptors,
+                pattern_descriptors=rdm.pattern_descriptors)
+
 def create_RDM_img(test_model, SL_RDM, data, mask_img):
     # takes a couple minutes to start running – don't give up too early!
     # in total, takes about 15 minutes to run with 2 cores
@@ -276,6 +308,8 @@ elif network_name == 'tian_subcortical_S3':
     
 
 ''' Generate run-specific RDMs '''
+outlier_log = []  # collects flagged (participant, run, ROI, condition) rows for QA
+
 if analysis_window == 'session':
     model_desc = 'run-all_LSS'
 
@@ -310,6 +344,15 @@ if analysis_window == 'session':
                                                        #'group': group_id
                                                       },)
         test_rdm = rsatoolbox.rdm.calc_rdm(dataset)
+
+        outlier_idx = flag_outlier_conditions(test_rdm)
+        if len(outlier_idx):
+            print(f'  ! outlier condition(s) flagged in {roi_list[rx]}: index {list(outlier_idx)}')
+            for oi in outlier_idx:
+                outlier_log.append({'participant': sub_id, 'run': 'session',
+                                     'ROI': roi_list[rx], 'condition_idx': int(oi)})
+            test_rdm = mask_outlier_conditions(test_rdm, outlier_idx)
+
         roi_rdms.append(test_rdm)
 
     concat_rdms = rsatoolbox.rdm.rdms.concat(roi_rdms)
@@ -348,6 +391,16 @@ elif analysis_window == 'run':
                                                            #'group': group_id,
                                                           },)
             test_rdm = rsatoolbox.rdm.calc_rdm(dataset)
+
+            outlier_idx = flag_outlier_conditions(test_rdm)
+            if len(outlier_idx):
+                run_label = os.path.basename(data_folder)
+                print(f'  ! outlier condition(s) flagged in {roi_list[rx]} ({run_label}): index {list(outlier_idx)}')
+                for oi in outlier_idx:
+                    outlier_log.append({'participant': sub_id, 'run': run_label,
+                                         'ROI': roi_list[rx], 'condition_idx': int(oi)})
+                test_rdm = mask_outlier_conditions(test_rdm, outlier_idx)
+
             #roi_rdms.append(test_rdm)
             run_roi_rdm_list.append(test_rdm)
         concat_rdms = rsatoolbox.rdm.rdms.concat(run_roi_rdm_list)
@@ -362,5 +415,12 @@ out_dir = os.path.join(model_dir, 'rsa_roi', network_name)
 os.makedirs(out_dir, exist_ok=True)
 out_fpath = os.path.join(out_dir,
                          f'sub-{sub_id}_{network_name}_{model_desc}_rdms.hdf5')
-concat_rdms.save(out_fpath, 
+concat_rdms.save(out_fpath,
                  file_type='hdf5', overwrite=True)
+
+# log any flagged/masked outlier conditions for QA
+if len(outlier_log):
+    outlier_log_fpath = os.path.join(out_dir,
+                             f'sub-{sub_id}_{network_name}_{model_desc}_outlier-conditions.csv')
+    pd.DataFrame(outlier_log).to_csv(outlier_log_fpath, index=False)
+    print(f'flagged {len(outlier_log)} outlier condition(s), logged to {outlier_log_fpath}')
